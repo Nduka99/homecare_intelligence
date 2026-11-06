@@ -1,0 +1,346 @@
+/* The referral form: office stationery on form stock.
+   Four colour roles and nothing else: printed black for the model's reading and the form,
+   a red stamp for "act today" only, blue biro for a person's decisions, yellow highlighter for
+   the words the model quoted. Dark mode is the carbon copy: the same roles on a dark sheet. */
+
+:root {
+  color-scheme: light dark;
+  --sheet: #ffffff;
+  --print: #141414;
+  --rule: #141414;
+  --rule-soft: #b9b9b9;
+  --stamp: #b3122e;
+  --biro: #1f4fa3;
+  --on-biro: #ffffff;
+  --biro-press: #173c7d;
+  --highlight: #ffe14d;
+  --on-highlight: #141414;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sheet: #131416;
+    --print: #ecebe6;
+    --rule: #ecebe6;
+    --rule-soft: #4d4f54;
+    --stamp: #ff8a94;
+    --biro: #a9c1ff;
+    --on-biro: #0b1530;
+    --biro-press: #c8d7ff;
+    --highlight: #d8bc3c;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--sheet);
+  color: var(--print);
+  font: 1rem/1.5 var(--body);
+}
+
+::selection { background: var(--print); color: var(--sheet); } /* yellow is kept for quoted evidence */
+
+:focus-visible { outline: 3px solid var(--biro); outline-offset: 2px; }
+
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+a:hover { text-decoration-thickness: 2px; }
+
+h1, h2, h3 { line-height: 1.2; margin: 0; }
+h1 { font-size: 1.75rem; font-weight: 750; letter-spacing: -0.01em; }
+h2 { font-size: 1.25rem; font-weight: 700; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--print);
+  color: var(--sheet);
+}
+.skip:focus { top: 0.5rem; }
+
+.synthetic {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.page { max-width: 76rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+.footer { padding-top: 0; font-size: 0.875rem; }
+
+/* The form's head: title and form line on the left, who is signed in on the right. */
+.masthead {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: end;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--rule);
+}
+.form-line {
+  margin: 0.375rem 0 0;
+  font-size: 0.9375rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+}
+.account { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9375rem; }
+.account form { margin: 0; }
+
+.figure { font-variant-numeric: tabular-nums; }
+
+/* Buttons and fields: boxes appear only where a person acts. */
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.primary {
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 0;
+  background: var(--biro);
+  color: var(--on-biro);
+  font-weight: 700;
+}
+.primary:hover { background: var(--biro-press); }
+.ink {
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 0;
+  background: var(--print);
+  color: var(--sheet);
+  font-weight: 700;
+}
+.ink:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.quiet {
+  min-height: 2.5rem;
+  padding: 0.375rem 0.875rem;
+  border: 1.5px solid var(--print);
+  background: transparent;
+}
+.quiet:hover { background: var(--print); color: var(--sheet); }
+select {
+  min-height: 2.75rem;
+  padding: 0.375rem 0.5rem;
+  border: 1.5px solid var(--print);
+  background: var(--sheet);
+}
+input[type="radio"] {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  border: 2px solid var(--print);
+  border-radius: 50%;
+  background: var(--sheet);
+}
+input[type="radio"]:checked { border-color: var(--biro); background: var(--biro); box-shadow: inset 0 0 0 0.2rem var(--sheet); }
+/* Windows High Contrast repaints colours: give the radios back to the system there. */
+@media (forced-colors: active) {
+  input[type="radio"] { appearance: auto; }
+}
+
+/* The week, as the date boxes of a form. */
+.days {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1.5px solid var(--rule);
+  max-width: 34rem;
+}
+.days li + li { border-left: 1px solid var(--rule); }
+.days a {
+  display: grid;
+  place-items: center;
+  min-height: 3.5rem;
+  padding: 0.25rem;
+  text-decoration: none;
+}
+.days a:hover { text-decoration: underline; }
+.days .weekday { font-size: 0.8125rem; font-variant-caps: all-small-caps; letter-spacing: 0.06em; }
+.days .date { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.days [aria-current="date"] { background: var(--print); color: var(--sheet); }
+
+.tally { margin: 1.25rem 0 0; font-size: 1.125rem; }
+.tally .figure { font-size: 1.5rem; font-weight: 750; }
+
+/* The register: one ruled section per band, in review order. */
+.band { margin-top: 2.5rem; }
+.band h2 { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.stamp {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border: 2px solid currentColor;
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stamp.today { color: var(--stamp); }
+.count { font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.table-scroll { overflow-x: auto; scrollbar-color: var(--print) var(--sheet); scrollbar-gutter: stable; }
+.scroll-hint { display: none; margin: 0 0 0.5rem; font-size: 0.9375rem; }
+.orient { max-width: 68ch; margin: 1.25rem 0 0; }
+.register {
+  width: 100%;
+  min-width: 68rem; /* a phone scrolls the table rather than crushing its words */
+  border-collapse: collapse;
+  table-layout: fixed; /* the same columns in every section */
+  font-variant-numeric: tabular-nums;
+}
+.c-num { width: 3.5rem; }
+.c-client { width: 13rem; }
+.c-visit { width: 11rem; }
+.c-carer { width: 4.5rem; }
+.c-concern { width: 21rem; }
+.c-why { width: 9rem; }
+.c-decision { width: 7.5rem; }
+.window { white-space: nowrap; }
+.register th {
+  padding: 0.5rem;
+  border-bottom: 1.5px solid var(--rule);
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.04em;
+  text-align: left;
+  white-space: nowrap;
+}
+.register td { padding: 0.625rem 0.5rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+.register .num { width: 3rem; font-weight: 700; }
+.register .client a { font-weight: 700; }
+.register .reasons { font-size: 0.9375rem; }
+
+.biro { color: var(--biro); font-weight: 650; }
+.tick { width: 1em; height: 1em; vertical-align: -0.125em; margin-right: 0.25rem; }
+
+.empty { margin: 2rem 0 0; max-width: 60ch; }
+
+/* The note review: numbered sections, as on a referral form. */
+.sheet-section { margin-top: 2.25rem; }
+.sheet-section > h2 { display: flex; align-items: center; gap: 0.625rem; margin-bottom: 1rem; }
+.sec {
+  display: inline-grid;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border: 1.5px solid var(--rule);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.visit-details { display: grid; grid-template-columns: max-content 1fr; gap: 0.375rem 1.5rem; margin: 0; }
+.visit-details dt { font-weight: 700; }
+.visit-details dd { margin: 0; }
+
+.entry {
+  max-width: 68ch;
+  margin: 0;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--rule);
+  font-size: 1.125rem;
+  line-height: 1.65;
+}
+mark { background: var(--highlight); color: var(--on-highlight); }
+.quote mark { padding: 0 0.1em; }
+.ref { font-size: 0.75em; font-weight: 700; margin-left: 0.1em; }
+.provenance { margin: 0.75rem 0 0; font-size: 0.9375rem; max-width: 68ch; }
+.provenance summary { cursor: pointer; text-decoration: underline; text-underline-offset: 0.2em; list-style: none; }
+.provenance summary::-webkit-details-marker { display: none; }
+.provenance summary::before {
+  content: "";
+  display: inline-block;
+  margin-right: 0.5rem;
+  border-style: solid;
+  border-width: 0.3rem 0 0.3rem 0.45rem;
+  border-color: transparent transparent transparent currentColor;
+  vertical-align: 0.05rem;
+}
+.provenance details[open] summary::before { transform: rotate(90deg); }
+.provenance code { font-size: 0.875rem; overflow-wrap: anywhere; }
+.tamper-note { max-width: 68ch; margin: 1rem 0 0; padding: 0.75rem 1rem; border: 2px dashed var(--print); }
+
+.finding { max-width: 52rem; margin: 0 0 1.25rem; padding: 1rem 1.125rem 1.125rem; border: 1px solid var(--rule); }
+.finding legend { padding: 0 0.5rem; font-weight: 700; font-size: 1.0625rem; }
+.finding .stamp { margin-left: 0.5rem; font-size: 0.75rem; }
+.finding .quote { margin: 0.25rem 0 0; font-size: 1.0625rem; }
+.finding .why { margin: 0.5rem 0 0; }
+.finding .read { margin: 0.5rem 0 0; font-size: 0.9375rem; }
+.flag { font-weight: 700; }
+.choices { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin: 1rem 0 0; padding: 0; border: 0; }
+.choice { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; cursor: pointer; }
+.right-category { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.5rem; }
+.last { margin: 0.75rem 0 0; }
+
+/* The right-category list shows only once "wrong category" is ticked; without :has it always shows. */
+@supports selector(:has(*)) {
+  .finding .right-category { display: none; }
+  .finding:has(input[value="wrong category"]:checked) .right-category { display: flex; }
+}
+
+.sign {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid var(--rule);
+}
+
+/* The carer's visit sheet. */
+.visits { list-style: none; margin: 1.5rem 0 0; padding: 0; border-top: 1.5px solid var(--rule); max-width: 48rem; }
+.visits li {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.25rem 1rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.visits .when { font-weight: 700; font-variant-numeric: tabular-nums; }
+.visits .what { margin: 0; }
+.visits .needs { margin: 0.25rem 0 0; font-size: 0.9375rem; }
+
+.signin { max-width: 32rem; }
+.signin form { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
+.signin h2 { margin-bottom: 0.25rem; }
+.signin label { display: block; font-weight: 700; margin-bottom: 0.375rem; }
+.signin input[type="text"], .signin input[type="password"], .signin input:not([type]) {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.5rem;
+  margin-bottom: 1rem;
+  border: 1.5px solid var(--print);
+  background: var(--sheet);
+}
+.signin select { width: 100%; margin-bottom: 1rem; }
+.alert { margin: 1rem 0 0; padding: 0.75rem 1rem; border: 2px solid var(--print); color: var(--print); font-weight: 600; } /* red is kept for act today */
+
+@media (max-width: 40rem) {
+  .scroll-hint { display: block; }
+  h1 { font-size: 1.5rem; }
+  .visit-details { grid-template-columns: 1fr; }
+  .visit-details dd { margin-bottom: 0.5rem; }
+  .visits li { grid-template-columns: 1fr; }
+  .entry { font-size: 1.0625rem; }
+}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block masthead %}
+<h1>Home-care intelligence</h1>
+<p class="form-line">Care-note review for one synthetic agency</p>
+{% endblock %}
+{% block main %}
+<div class="signin">
+  <p>Carers' visit notes are read by a local model for safeguarding concerns, signs of deterioration and missed tasks. Every finding quotes the words it rests on, and a person decides each one.</p>
+  {% if message %}<p class="alert" role="alert">{{ message }}</p>{% endif %}
+  {% if demo %}
+  <form method="post" action="/signin">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="user" value="lead">
+    <h2>Safeguarding lead</h2>
+    <p>Review the day's register of flagged notes and record a decision on each finding.</p>
+    <button class="ink" type="submit">Sign in as the safeguarding lead</button>
+  </form>
+  <form method="post" action="/signin">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>Carer</h2>
+    <p>See one carer's planned visits for a day and their own notes.</p>
+    <label for="carer">Carer</label>
+    <select id="carer" name="user">
+      {% for carer in carers %}<option>{{ carer }}</option>{% endfor %}
+    </select>
+    <button class="ink" type="submit">Sign in as this carer</button>
+  </form>
+  {% else %}
+  <form method="post" action="/signin">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="user">Username</label>
+    <input id="user" name="user" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button class="ink" type="submit">Sign in</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

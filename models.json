@@ -1,0 +1,152 @@
+[
+ {
+  "name": "gemma-4-e4b",
+  "file": "gemma-4-E4B-it-Q4_K_M.gguf",
+  "source": "unsloth/gemma-4-E4B-it-GGUF",
+  "revision": "ce152932ac27bc40bc9c727386760424d50bb456",
+  "bytes": 4977169088,
+  "sha256": "dff0ffba4c90b4082d70214d53ce9504a28d4d8d998276dcb3b8881a656c742a",
+  "licence": "Apache-2.0",
+  "family": "Google Gemma",
+  "role": "extraction candidate",
+  "server_args": ["-ngl", "all", "-c", "8192", "-np", "1", "--fit", "off"]
+ },
+ {
+  "name": "gemma-4-26b-a4b",
+  "file": "gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf",
+  "source": "unsloth/gemma-4-26B-A4B-it-GGUF",
+  "revision": "an earlier revision (today's main differs)",
+  "bytes": 17010978592,
+  "sha256": "453cf049ba87a29b9ed5739087b84b7fa0265a4f2b11eefa2c77683dec6a8020",
+  "licence": "Apache-2.0",
+  "family": "Google Gemma",
+  "role": "extraction candidate",
+  "server_args": ["-ngl", "all", "--n-cpu-moe", "99", "-c", "8192", "-np", "1", "--fit", "off"]
+ },
+ {
+  "name": "qwen3.5-4b",
+  "file": "Qwen3.5-4B-Q4_K_M.gguf",
+  "source": "unsloth/Qwen3.5-4B-GGUF",
+  "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+  "bytes": 2740937888,
+  "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+  "licence": "Apache-2.0",
+  "family": "Alibaba Qwen",
+  "role": "extraction candidate",
+  "server_args": ["-ngl", "all", "-c", "8192", "-np", "1", "--fit", "off"]
+ },
+ {
+  "name": "qwen3.6-35b-a3b",
+  "file": "Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf",
+  "source": "unsloth/Qwen3.6-35B-A3B-GGUF",
+  "revision": "main (15 Sept 2026)",
+  "bytes": 22360456160,
+  "sha256": "707a55a8a4397ecde44de0c499d3e68c1ad1d240d1da65826b4949d1043f4450",
+  "licence": "Apache-2.0",
+  "family": "Alibaba Qwen",
+  "role": "extraction candidate",
+  "server_args": ["-ngl", "all", "--n-cpu-moe", "99", "-c", "8192", "-np", "1", "--fit", "off"]
+ },
+ {
+  "name": "glm-4.7-flash",
+  "file": "GLM-4.7-Flash-UD-Q4_K_XL.gguf",
+  "source": "unsloth/GLM-4.7-Flash-GGUF",
+  "revision": "0d32489ecb9db6d2a4fc93bd27ef01519f95474d",
+  "bytes": 17520169312,
+  "sha256": "b0d4fbc1211f891b4cfbf2a497160bfe06a49412420068904d426b7a13f4ba7f",
+  "licence": "MIT",
+  "family": "Zhipu GLM",
+  "role": "note writer for the dev and test sets",
+  "server_args": ["-ngl", "all", "--n-cpu-moe", "99", "-c", "8192", "-np", "1", "--fit", "off"]
+ },
+ {
+  "name": "nemotron-3.5-lightning",
+  "file": "NVIDIA-Nemotron-3.5-Lightning-30B-A3B-Q4_0.gguf",
+  "source": "ggml-org/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF",
+  "revision": "8a08a1c81dadcc75d35dbb96016cfd344b632e67",
+  "bytes": 18898091584,
+  "sha256": "61f87e75974e4b535dcdf9aad056541a9514f1dfa4538b463b081d19b7a00e3c",
+  "licence": "OpenMDW-1.1",
+  "family": "NVIDIA Nemotron",
+  "role": "note writer for the held-out set",
+  "server_args": ["-ngl", "all", "--n-cpu-moe", "99", "-c", "8192", "-np", "1", "--fit", "off"]
+ },
+ {
+  "name": "deberta-v3-large-nli",
+  "folder": "deberta-v3-large-nli",
+  "source": "MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli",
+  "revision": "b3546ea6b0346eb6f8d5d68b13c7dc6d0376b3d7",
+  "files": {
+   "config.json": {
+    "bytes": 1056,
+    "sha256": "7f9d420b616691c5b575bab8839719aefbddc656d8e1316519414b097ce43e3d"
+   },
+   "model.safetensors": {
+    "bytes": 870182606,
+    "sha256": "c03cd208bf920b4fbbb182a0535859a566e8acc3477d2b536bf87b769978524b"
+   },
+   "tokenizer.json": {
+    "bytes": 8648889,
+    "sha256": "7aa118770f066a74530d161c7d0b994d0629cc0ff3a0df213f184192773f960a"
+   },
+   "tokenizer_config.json": {
+    "bytes": 395,
+    "sha256": "556a192d83e3edb45a09a6207095dd9295c3b2279062e5cc430feac4cb7a0817"
+   },
+   "special_tokens_map.json": {
+    "bytes": 156,
+    "sha256": "fcfbeb4e25cd37fb5b8030406394253b245230fd3b552750092bab7d24d827da"
+   },
+   "added_tokens.json": {
+    "bytes": 18,
+    "sha256": "cd0141b19e809eb963a8f8244fad72530233f729e1f6960d281e1fbb3537b2fb"
+   },
+   "spm.model": {
+    "bytes": 2464616,
+    "sha256": "c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd"
+   }
+  },
+  "licence": "MIT",
+  "family": "Microsoft DeBERTa",
+  "role": "queue-ranking verifier (NLI, CPU)"
+ },
+ {
+  "name": "piguard",
+  "folder": "piguard",
+  "source": "leolee99/PIGuard",
+  "revision": "dd78b24e330193a22d2293ac66922dd4f982f563",
+  "files": {
+   "config.json": {
+    "bytes": 1062,
+    "sha256": "f7ab538357be6b11364e4ad225595fe2a96b64f69506387a04e3cae699bac1d0"
+   },
+   "model.safetensors": {
+    "bytes": 737719272,
+    "sha256": "f90b9806de93b6286cda517300d4b55e5ce2e5ccbf8339dc59be21ca0dd9a25e"
+   },
+   "tokenizer.json": {
+    "bytes": 8656624,
+    "sha256": "5124ef2ead1a10a717703bc436de7f353da76d6340e4587719b42b1693707964"
+   },
+   "tokenizer_config.json": {
+    "bytes": 1284,
+    "sha256": "557b3d33d3f41b81ad769244e506549e98a1857d41dd58160aacd4d98d710b5a"
+   },
+   "special_tokens_map.json": {
+    "bytes": 286,
+    "sha256": "9463f61e1b109a8eb4688b829260d7c6b1e6dff04c98ff7269bb89e2b92369b9"
+   },
+   "added_tokens.json": {
+    "bytes": 23,
+    "sha256": "dc046d04c9b0ada7ae6f1dc89c465801799acdf0c9a6aab8c15a1b2d5ca4e91f"
+   },
+   "spm.model": {
+    "bytes": 132,
+    "sha256": "f2d17af198445dafd6bd0a85951e2415b1666baa9604abae9b199306fad7486e"
+   }
+  },
+  "licence": "MIT",
+  "family": "Microsoft DeBERTa",
+  "role": "tamper-tag study (prompt-injection classifier, CPU)"
+ }
+]

@@ -1,0 +1,76 @@
+{
+ "sets": {
+  "attacks-adaptive": {
+   "description": "0 insertions kept from an adaptive search by qwen3.6-35b-a3b against gemma-4-26b-a4b: 288 tries, 0 made it miss",
+   "files": {
+    "attacks.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  },
+  "attacks-generated": {
+   "description": "8 attacks written once by qwen3.6-35b-a3b",
+   "files": {
+    "attacks.jsonl": "b06d5a0087f4c156ace26f20257c6306bd24cc6b54b24db85633ef81f4b024d6"
+   }
+  },
+  "attacks-llmail": {
+   "description": "10 human attacks from LLMail-Inject Phase 2 (MIT; revision 1063bdf01ec8762b812d5e06ee768a06faa5a6f7, file sha256 f89af984e345430c3b357903890e30867bf4676f4ef10c138cc7bad218e890b8), goal rewritten by qwen3.6-35b-a3b and checked in code",
+   "files": {
+    "attacks.jsonl": "55be68e564383644deeb3787340726c52a4c7bdeb0fc79f68eaa475b67e7dba3"
+   }
+  },
+  "attacks-search": {
+   "description": "10 insertions kept from a graded search by qwen3.6-35b-a3b against gemma-4-26b-a4b: 432 tries; 29 outside beat the whole-note read, 0 inside beat every read",
+   "files": {
+    "attacks.jsonl": "0d929bac74602b94a3fa5db4e5a749c6df965d80d09132b603d62d060f3a87bb"
+   }
+  },
+  "demo-week": {
+   "description": "DEMO ONLY, never an evaluation set: 910 synthetic notes written by glm-4.7-flash from the rota planned for days 21-27",
+   "files": {
+    "notes.jsonl": "64107c7b2c356987e73ea3ff35450c9ecf4e1cb7fcddca25ab3666c3ae26b698"
+   }
+  },
+  "notes-attack": {
+   "description": "24 synthetic notes written by glm-4.7-flash",
+   "files": {
+    "notes.jsonl": "ce6384c9794f52508ab29777210a10c390d4353221fe8e9d6fdbb4b879ca9d64"
+   }
+  },
+  "notes-attack-dev": {
+   "description": "12 synthetic notes written by glm-4.7-flash",
+   "files": {
+    "notes.jsonl": "79f267d51a99c78807b246e0c55a2baaf64142f0fb3cbac35a12e69dad7b0e44"
+   }
+  },
+  "notes-attack-final": {
+   "description": "24 synthetic notes written by glm-4.7-flash",
+   "files": {
+    "notes.jsonl": "66bc38628a36aa85030b935588763623e2a5073a9c355413fa43dcb38caa39cf"
+   }
+  },
+  "notes-attack-fresh": {
+   "description": "24 synthetic notes written by glm-4.7-flash",
+   "files": {
+    "notes.jsonl": "67c0716180219a345dd5abd508b17e3a2f27ec5c9b80cd7beb1e49127408b7cd"
+   }
+  },
+  "notes-dev": {
+   "description": "121 synthetic notes written by glm-4.7-flash",
+   "files": {
+    "notes.jsonl": "9cfda2eef6c8db43d6b7ad66e3da43682ac8ee1bdccb5517183cef195c903f6a"
+   }
+  },
+  "notes-heldout": {
+   "description": "177 synthetic notes written by nemotron-3.5-lightning",
+   "files": {
+    "notes.jsonl": "bd5649c620d291882ef1c8342991531c7598474a2a156983f7ccc5934a3e37a9"
+   }
+  },
+  "notes-test": {
+   "description": "200 synthetic notes written by glm-4.7-flash",
+   "files": {
+    "notes.jsonl": "0c0dd6687527b6ae89c8c47e0f9469d7434625aee32991eb65a897b093c288ef"
+   }
+  }
+ }
+}

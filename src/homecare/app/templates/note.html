@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "marks.html" import tick %}
+{% block title %}{{ "Note review" if reviewer else "Your note" }}, {{ note.client }}{% endblock %}
+{% block masthead %}
+<h1>{{ "Note review" if reviewer else "Your note" }}: {{ note.client }}</h1>
+<p class="form-line">{{ note.visit }} visit, {{ long_date }} · carer {{ note.carer }} · synthetic</p>
+{% endblock %}
+{% block main %}
+<p><a href="{{ '/queue' if reviewer else '/today' }}?day={{ note.day }}">Back to the {{ "register" if reviewer else "visit sheet" }}</a></p>
+
+<section class="sheet-section" aria-labelledby="s1">
+  <h2 id="s1"><span class="sec">1</span> The visit</h2>
+  <dl class="visit-details">
+    <dt>Client</dt><dd>{{ note.client }}, {{ note.details }}</dd>
+    <dt>Visit</dt><dd>{{ note.visit }}, <span class="figure">{{ note.window }}</span>, {{ long_date }}</dd>
+    <dt>Carer</dt><dd>{{ note.carer }}</dd>
+    {% if reviewer %}<dt>Why it is here</dt><dd>{{ note.why }}</dd>{% endif %}
+  </dl>
+</section>
+
+<section class="sheet-section" aria-labelledby="s2">
+  <h2 id="s2"><span class="sec">2</span> The carer's note</h2>
+  <p class="entry">{% for run in note.segments %}{% if run.findings and reviewer %}<mark>{{ run.text }}</mark>{% if run.ends %}<sup class="ref">{{ run.ends | join(",") }}</sup>{% endif %}{% else %}{{ run.text }}{% endif %}{% endfor %}</p>
+  {% if reviewer %}
+  <div class="provenance">
+    <p>{% if note.findings %}Highlighted words are the exact quotes the model's findings rest on, each checked against this note. {% endif %}Read on the laptop by {{ extraction.model }}, pipeline {{ extraction.pipeline }}.</p>
+    <details>
+      <summary>Run details</summary>
+      <p>Prompt SHA-256 <code>{{ extraction.prompt }}</code><br>Model file SHA-256 <code>{{ extraction.sha256 }}</code></p>
+    </details>
+  </div>
+  {% if note.tamper %}
+  <p class="tamper-note"><strong>Possible tampering.</strong> A separate checker found text in this note that looks like an instruction to the software. This tag only adds the note to review; read the note as written.</p>
+  {% endif %}
+  {% endif %}
+</section>
+
+{% if reviewer %}
+<form method="post" action="/notes/{{ note.id }}/decisions">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <section class="sheet-section" aria-labelledby="s3">
+    <h2 id="s3"><span class="sec">3</span> Findings and your decision</h2>
+    {% if not note.findings %}
+    <p class="empty">The model found nothing in this note. It is here as a {{ "random check" if "random check of a note with no finding" in note.reasons else "possible tampering check" }}: read it and record anything it missed in section 4.</p>
+    {% endif %}
+    {% for f in note.findings %}
+    <fieldset class="finding">
+      <legend>Finding {{ f.number }}: {{ f.category }}<span class="stamp{% if f.band == 'act today' %} today{% endif %}">{{ f.band }}</span></legend>
+      <p class="quote"><mark>“{{ f.quote }}”</mark></p>
+      <p class="why">{{ f.reason }}</p>
+      <p class="read">Found by {{ f.read_label }}.{% if f.sentence_only %} <span class="flag">Read without the rest of the note: check the context above.</span>{% endif %}</p>
+      <div class="choices" role="radiogroup" aria-label="Your decision on finding {{ f.number }}">
+        {% for label in ["confirmed", "wrong category", "not a concern"] %}
+        <label class="choice"><input type="radio" name="finding-{{ f.id }}" value="{{ label }}"{% if f.decision and f.decision.label == label %} checked{% endif %}> {{ label | capitalize }}</label>
+        {% endfor %}
+      </div>
+      <div class="right-category">
+        <label for="category-{{ f.id }}">If the category is wrong, the right one</label>
+        <select id="category-{{ f.id }}" name="category-{{ f.id }}">
+          <option value="">Choose a category</option>
+          {% for c in note.categories %}<option value="{{ c }}"{% if f.decision and f.decision.category == c %} selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      {% if f.decision %}<p class="last biro">{{ tick() }}Your last decision: {{ f.decision.label }}{% if f.decision.category %} ({{ f.decision.category }}){% endif %}</p>{% endif %}
+    </fieldset>
+    {% endfor %}
+  </section>
+
+  <section class="sheet-section" aria-labelledby="s4">
+    <h2 id="s4"><span class="sec">4</span> Anything the model missed</h2>
+    <div class="right-category">
+      <label for="missed">A concern this note shows that no finding names</label>
+      <select id="missed" name="missed">
+        <option value="">Nothing missed</option>
+        {% for c in note.categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    {% if note.missed %}<p class="last biro">{{ tick() }}Your last record: missed {{ note.missed.category }}</p>{% endif %}
+  </section>
+
+  <div class="sign">
+    <p>Decided by <strong>{{ user }}</strong>. Each decision is kept, with the time and how this note reached the register.</p>
+    <button class="primary" type="submit">Save and open the next note</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

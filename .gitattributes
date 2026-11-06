@@ -1,0 +1,2 @@
+# Same line endings on every machine, so the container and CI see identical files.
+* text=auto eol=lf

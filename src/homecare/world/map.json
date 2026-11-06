@@ -1,0 +1,16 @@
+{
+ "file": "data/maps/b12-drive.graphml",
+ "sha256": "c11ad9fa3f9f59153d68ac828b44d881583c44640efc3bccf7bd4c857723142d",
+ "centre": [
+  52.462,
+  -1.882
+ ],
+ "dist": 3000,
+ "network_type": "drive",
+ "osmnx": "2.1.1",
+ "downloaded": "2026-11-05",
+ "nodes": 3775,
+ "edges": 8278,
+ "credit": "© OpenStreetMap contributors",
+ "licence": "ODbL-1.0"
+}

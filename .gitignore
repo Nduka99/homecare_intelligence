@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+# Local-only material: data, model files and the private publish tools never enter git.
+/data/
+models/
+tools/
+# Private notes that stay on this machine.
+private/
+# A separate project with its own repository.
+care-inspection-reader/
+
+# Local design-tool logs and screenshots.
+/.impeccable/questions/
+/.impeccable/review/

@@ -1,0 +1,17 @@
+.git
+.venv
+**/__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.env
+data
+models
+tools
+private
+care-inspection-reader
+docs
+tests
+# Coordination files and other notes stay out of the image; only the README goes in.
+*.md
+!README.md

@@ -1,0 +1,25 @@
+# Dependabot opens a pull request when a dependency has a newer release. A release must be at
+# least 14 days old before it is suggested (the cooldown), which lowers the risk of adopting a
+# compromised or broken new release. A Python update changes uv.lock. The serving image's lock,
+# requirements/serve.lock, must then be rebuilt by running the command that
+# `uv run python scripts/check.py` prints, and CI fails until it is.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 14
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 14
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 14

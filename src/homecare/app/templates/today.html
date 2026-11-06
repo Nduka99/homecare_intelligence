@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "marks.html" import days %}
+{% set current = week | selectattr("day", "equalto", day) | first %}
+{% block title %}Visit sheet, {{ current.long }}{% endblock %}
+{% block masthead %}
+<h1>Visit sheet</h1>
+<p class="form-line">Carer {{ user }} · {{ current.long }} · synthetic</p>
+{% endblock %}
+{% block main %}
+<p class="orient">Your planned visits for the day, in route order. You see only your own clients and your own notes.</p>
+{{ days(week, day, link) }}
+{% if visits %}
+<ol class="visits">
+  {% for v in visits %}
+  <li>
+    <span class="when">{{ v.window }}</span>
+    <div>
+      <p class="what"><strong>{{ v.client }}</strong>, {{ v.visit | lower }} visit, <span class="figure">{{ v.duration }}</span> minutes</p>
+      <p class="needs">Needs: {{ v.needs | join(", ") if v.needs else "none recorded" }}.{% if v.note %} <a href="/notes/{{ v.note }}">Your note</a>{% endif %}</p>
+    </div>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="empty">No visits are planned for you on this day. It is one of your two days off, or the rota gave your visits to others.</p>
+{% endif %}
+{% endblock %}

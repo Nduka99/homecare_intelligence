@@ -1,0 +1,15 @@
+{# Marks used on more than one screen. #}
+
+{% macro tick() -%}
+<svg class="tick" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2.5 8.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square"/></svg>
+{%- endmacro %}
+
+{% macro days(week, current, link) -%}
+<nav aria-label="Day of the demo week">
+  <ol class="days">
+    {% for d in week %}
+    <li><a href="{{ link }}?day={{ d.day }}"{% if d.day == current %} aria-current="date"{% endif %}><span class="weekday">{{ d.weekday }}</span><span class="date">{{ d.date }}</span><span class="visually-hidden"> {{ d.long }}</span></a></li>
+    {% endfor %}
+  </ol>
+</nav>
+{%- endmacro %}
