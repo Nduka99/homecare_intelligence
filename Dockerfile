@@ -1,6 +1,12 @@
 # Serving image. Build context is the repository root.
-# Base pinned by digest: python:3.13-slim (Debian), checked 2026-11-04.
-FROM python:3.13-slim@sha256:ae14d4ce8771606477a81446e7ef429edd6762305fc50c84507c1041fa8285d1
+# Base pinned by digest: python:3.13-slim (Debian 13, Python 3.13.18), built 2026-11-05.
+FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90
+
+# Debian's security fix for zlib (CVE-2026-76844, CVE-2026-85091, CVE-2026-27171), which this
+# base predates; pinned to that exact version. Remove once the base image ships it.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1 \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -21,6 +27,9 @@ RUN pip install --require-hashes --no-deps -r requirements/serve.lock \
 # The package runs from source (PYTHONPATH), so no unpinned build backend is downloaded.
 COPY LICENSE README.md ./
 COPY src/ src/
+# The commit shown in the footer and /healthz; last, so a new commit reuses every layer above.
+ARG GIT_COMMIT=local
+ENV GIT_COMMIT=$GIT_COMMIT
 
 USER 1000:1000
 EXPOSE 8000

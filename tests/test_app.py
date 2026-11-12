@@ -57,8 +57,19 @@ def test_health_reports_ok_and_build(tmp_path: Path) -> None:
 def test_every_page_says_synthetic_and_sends_the_security_headers(tmp_path: Path) -> None:
     response = client_for(demo_settings(tmp_path)).get("/signin")
     assert "SYNTHETIC" in response.text
-    assert "script-src 'none'" in response.headers["content-security-policy"]
-    assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+    policy = dict(
+        rule.strip().split(" ", 1)
+        for rule in response.headers["content-security-policy"].split(";")
+    )
+    # Scripts only from this site and never inline; script may not write HTML (Trusted Types),
+    # and only the carer app's policy and its narrow default may exist. Pages other than the
+    # carer's have none. Images only from this site and OpenStreetMap's tile server.
+    assert policy["script-src"] == "'self'" and policy["worker-src"] == "'self'"
+    assert policy["require-trusted-types-for"] == "'script'"
+    assert policy["trusted-types"] == "carer-app default"
+    assert policy["img-src"] == "'self' https://tile.openstreetmap.org"
+    assert policy["frame-ancestors"] == "'none'"
+    assert "<script" not in response.text
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["cache-control"] == "no-store"
 
@@ -144,8 +155,9 @@ def test_sign_ins_are_audited_without_secrets(tmp_path: Path) -> None:
     sign_in(client, "lead")
     connection = db.connect(tmp_path / "demo.db")
     entries = [record["entry"] for record in auditlog.chain(connection)]
-    assert [entry["event"] for entry in entries] == ["failed sign in", "sign in"]
-    assert entries[0]["user"] == "unknown account"  # what was typed is not kept
+    # Demo mode imports the sample export at start, and that is audited first.
+    assert [entry["event"] for entry in entries] == ["import", "failed sign in", "sign in"]
+    assert entries[1]["user"] == "unknown account"  # what was typed is not kept
     assert auditlog.problems(connection, settings["key"], settings["anchor"]) == []
 
 
@@ -173,3 +185,14 @@ def test_the_audit_table_refuses_edits(tmp_path: Path) -> None:
     connection = db.connect(tmp_path / "demo.db")
     with pytest.raises(sqlite3.IntegrityError, match="append-only"):
         connection.execute("DELETE FROM audit")
+
+
+def test_static_files_revalidate_and_pages_are_never_stored(tmp_path: Path) -> None:
+    """A phone keeps the stylesheet and script and asks only whether they changed (ETag); a
+    signed-in page is never kept by the browser's HTTP cache."""
+    client = client_for(demo_settings(tmp_path))
+    style = client.get("/static/app.css")
+    assert style.headers["cache-control"] == "no-cache" and "etag" in style.headers
+    again = client.get("/static/app.css", headers={"if-none-match": style.headers["etag"]})
+    assert again.status_code == 304
+    assert client.get("/signin").headers["cache-control"] == "no-store"

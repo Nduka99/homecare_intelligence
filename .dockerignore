@@ -12,6 +12,13 @@ private
 care-inspection-reader
 docs
 tests
+# The carer app's TypeScript and its tools: the image serves only the compiled files.
+node_modules
+web
+package.json
+package-lock.json
+.npmrc
+biome.json
 # Coordination files and other notes stay out of the image; only the README goes in.
 *.md
 !README.md

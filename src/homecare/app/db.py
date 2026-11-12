@@ -54,7 +54,8 @@ def load_seed(connection: sqlite3.Connection, seed: dict[str, Any]) -> None:
         )  # fmt: skip
     for note in seed["notes"]:
         connection.execute(
-            "INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO notes (id, visit, client, carer, day, body, tamper, tamper_probability)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (note["id"], note["visit"], note["client"], note["carer"], note["day"], note["text"],
              int(note["tamper"]), note["tamper_probability"]),
         )  # fmt: skip

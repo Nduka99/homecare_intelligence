@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "marks.html" import icon, carer_app_head, carer_app_script, offline_line %}
+{% block head %}{{ carer_app_head() }}{% endblock %}
+{% block scripts %}{{ carer_app_script() }}{% endblock %}
+{% block title %}{{ "Add to your note" if amends else "Write the note" }}, {{ visit.client }}{% endblock %}
+{% block main %}
+{{ offline_line() }}
+<div class="page-head">
+  <a class="back" href="/today?day={{ visit.day }}">{{ icon("back") }}Your visits</a>
+  <h1>{{ "Add to your note" if amends else "Write the note" }}</h1>
+  <p class="sub">{{ visit.client }} · {{ visit.visit }} visit, {{ visit.long_date }}</p>
+</div>
+
+<section class="card" aria-labelledby="visit-title">
+  <h2 id="visit-title">The visit</h2>
+  <dl class="details">
+    <dt>Client</dt><dd>{{ visit.client }}</dd>
+    <dt>Visit</dt><dd>{{ visit.visit }}, <span class="figure window">{{ visit.window }}</span>, {{ visit.long_date }}</dd>
+    {% if notes %}<dt>Written so far</dt><dd>{% for n in notes %}<a href="/notes/{{ n.id }}">{{ "your addition" if n.amends else "your note" }}</a>{{ ", " if not loop.last }}{% endfor %}</dd>{% endif %}
+  </dl>
+</section>
+
+{% if from %}
+<p class="card empty">This visit begins at <span class="figure">{{ from }}</span>. A note records a visit that happened, so you can write it from then.</p>
+{% else %}
+<form class="compose" method="post" action="/visits/{{ visit.id }}/notes" data-visit="{{ visit.id }}" data-carer="{{ user }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="key" value="{{ key }}">
+  <input type="hidden" name="amends" value="{{ amends }}">
+  <section class="card">
+    <h2><label for="body">{{ "Your addition" if amends else "Your note" }}</label></h2>
+    {% if amends %}<p class="hint">A care record is never changed. What you write here is added to your note, with the time it arrives.</p>{% endif %}
+    <p class="hint" id="body-hint">Write what you did, how the person seemed, and anything new or worrying, in your own words.</p>
+    {% if demo %}<p class="notice caution">This is a public demo: do not type real information. It is deleted when the service restarts.</p>{% endif %}
+    {% if message %}<p class="alert" role="alert" id="body-error">{{ message }}</p>{% endif %}
+    <div class="field">
+      <textarea id="body" name="body" rows="9" maxlength="{{ longest }}" required aria-describedby="body-hint{% if message %} body-error{% endif %}"{% if message %} aria-invalid="true"{% endif %}>{{ body }}</textarea>
+    </div>
+    <p class="draft-state" role="status"></p>
+  </section>
+  <div class="actionbar">
+    <p class="meta">Signing as <strong>{{ user }}</strong>.</p>
+    <button class="button primary" type="submit">{{ "Send the addition" if amends else "Send the note" }}</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

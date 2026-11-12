@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2022", "webworker"],
+    "outDir": "../../src/homecare/app/static",
+    "moduleDetection": "legacy"
+  },
+  "files": ["sw.ts"]
+}

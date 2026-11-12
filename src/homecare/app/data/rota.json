@@ -1,0 +1,703 @@
+{
+ "about": "SYNTHETIC rota data for the demo week: no real person, client or carer.",
+ "replan": {
+  "at": 600,
+  "changes": [
+   {
+    "after": "K16",
+    "before": "K15",
+    "reason": null,
+    "starts": 785,
+    "visit": "V03759",
+    "was": 720
+   },
+   {
+    "after": "K16",
+    "before": "K15",
+    "reason": null,
+    "starts": 753,
+    "visit": "V03747",
+    "was": 753
+   },
+   {
+    "after": "K19",
+    "before": "K15",
+    "reason": null,
+    "starts": 720,
+    "visit": "V03826",
+    "was": 787
+   },
+   {
+    "after": "K02",
+    "before": "K15",
+    "reason": null,
+    "starts": 1029,
+    "visit": "V03838",
+    "was": 990
+   },
+   {
+    "after": "K02",
+    "before": "K15",
+    "reason": null,
+    "starts": 1170,
+    "visit": "V03839",
+    "was": 1170
+   },
+   {
+    "after": "K22",
+    "before": "K15",
+    "reason": null,
+    "starts": 1245,
+    "visit": "V03760",
+    "was": 1207
+   },
+   {
+    "after": "K25",
+    "before": "K15",
+    "reason": null,
+    "starts": 1275,
+    "visit": "V03821",
+    "was": 1241
+   },
+   {
+    "after": "K22",
+    "before": "K25",
+    "reason": null,
+    "starts": 1278,
+    "visit": "V03748",
+    "was": 1273
+   },
+   {
+    "after": "K29",
+    "before": "K15",
+    "reason": null,
+    "starts": 1237,
+    "visit": "V03753",
+    "was": 1275
+   }
+  ],
+  "day": 27,
+  "out": "K15",
+  "retimed": [
+   {
+    "carer": "K02",
+    "starts": 1209,
+    "visit": "V03743",
+    "was": 1170
+   }
+  ],
+  "rota": {
+   "holds": {
+    "K01": [
+     2,
+     600
+    ],
+    "K02": [
+     3,
+     600
+    ],
+    "K03": [
+     2,
+     600
+    ],
+    "K04": [
+     2,
+     600
+    ],
+    "K05": [
+     2,
+     600
+    ],
+    "K08": [
+     3,
+     600
+    ],
+    "K09": [
+     1,
+     600
+    ],
+    "K10": [
+     2,
+     600
+    ],
+    "K11": [
+     3,
+     600
+    ],
+    "K12": [
+     1,
+     600
+    ],
+    "K16": [
+     3,
+     600
+    ],
+    "K17": [
+     3,
+     600
+    ],
+    "K18": [
+     2,
+     600
+    ],
+    "K19": [
+     3,
+     600
+    ],
+    "K22": [
+     3,
+     600
+    ],
+    "K23": [
+     3,
+     600
+    ],
+    "K24": [
+     3,
+     600
+    ],
+    "K25": [
+     3,
+     600
+    ],
+    "K26": [
+     3,
+     600
+    ],
+    "K29": [
+     3,
+     600
+    ],
+    "K30": [
+     2,
+     600
+    ]
+   },
+   "routes": {
+    "K01": [
+     "V03828",
+     "V03801",
+     "V03802",
+     "V03803",
+     "V03804",
+     "V03829"
+    ],
+    "K02": [
+     "V03793",
+     "V03815",
+     "V03740",
+     "V03741",
+     "V03742",
+     "V03838",
+     "V03839",
+     "V03743"
+    ],
+    "K03": [
+     "V03864",
+     "V03813",
+     "V03814"
+    ],
+    "K04": [
+     "V03845",
+     "V03857",
+     "V03858",
+     "V03859",
+     "V03860",
+     "V03846"
+    ],
+    "K05": [
+     "V03794",
+     "V03769"
+    ],
+    "K08": [
+     "V03770",
+     "V03779",
+     "V03836",
+     "V03837",
+     "V03780",
+     "V03781",
+     "V03771",
+     "V03789",
+     "V03757"
+    ],
+    "K09": [
+     "V03737",
+     "V03738",
+     "V03739"
+    ],
+    "K10": [
+     "V03855",
+     "V03810",
+     "V03811",
+     "V03812"
+    ],
+    "K11": [
+     "V03825",
+     "V03795",
+     "V03734",
+     "V03735",
+     "V03736"
+    ],
+    "K12": [
+     "V03807",
+     "V03808",
+     "V03809"
+    ],
+    "K15": [
+     "V03752",
+     "V03820",
+     "V03758"
+    ],
+    "K16": [
+     "V03754",
+     "V03805",
+     "V03833",
+     "V03834",
+     "V03747",
+     "V03759",
+     "V03835",
+     "V03755",
+     "V03806"
+    ],
+    "K17": [
+     "V03790",
+     "V03830",
+     "V03727",
+     "V03728",
+     "V03798",
+     "V03729",
+     "V03799",
+     "V03800",
+     "V03730"
+    ],
+    "K18": [
+     "V03784",
+     "V03847",
+     "V03848",
+     "V03849",
+     "V03850"
+    ],
+    "K19": [
+     "V03774",
+     "V03843",
+     "V03766",
+     "V03826",
+     "V03767",
+     "V03844",
+     "V03796",
+     "V03827"
+    ],
+    "K22": [
+     "V03761",
+     "V03797",
+     "V03775",
+     "V03776",
+     "V03777",
+     "V03778",
+     "V03762",
+     "V03760",
+     "V03748"
+    ],
+    "K23": [
+     "V03731",
+     "V03756",
+     "V03787",
+     "V03788",
+     "V03732",
+     "V03733"
+    ],
+    "K24": [
+     "V03782",
+     "V03862",
+     "V03840",
+     "V03841",
+     "V03842",
+     "V03863"
+    ],
+    "K25": [
+     "V03818",
+     "V03816",
+     "V03763",
+     "V03764",
+     "V03765",
+     "V03819",
+     "V03817",
+     "V03821"
+    ],
+    "K26": [
+     "V03783",
+     "V03772",
+     "V03851",
+     "V03852",
+     "V03853",
+     "V03856",
+     "V03773"
+    ],
+    "K29": [
+     "V03854",
+     "V03746",
+     "V03822",
+     "V03823",
+     "V03824",
+     "V03832",
+     "V03753"
+    ],
+    "K30": [
+     "V03831",
+     "V03749",
+     "V03750",
+     "V03751"
+    ]
+   },
+   "uncovered": [
+    {
+     "reason": "needs two carers (not planned yet)",
+     "visit": "V03744"
+    },
+    {
+     "reason": "needs two carers (not planned yet)",
+     "visit": "V03768"
+    },
+    {
+     "reason": "needs two carers (not planned yet)",
+     "visit": "V03785"
+    },
+    {
+     "reason": "needs two carers (not planned yet)",
+     "visit": "V03791"
+    },
+    {
+     "reason": "needs two carers (not planned yet)",
+     "visit": "V03861"
+    },
+    {
+     "reason": "needs two carers (not planned yet)",
+     "visit": "V03745"
+    },
+    {
+     "reason": "needs two carers (not planned yet)",
+     "visit": "V03786"
+    },
+    {
+     "reason": "needs two carers (not planned yet)",
+     "visit": "V03792"
+    }
+   ]
+  },
+  "search": {
+   "from": "the current plan",
+   "solutions": 1001,
+   "stopped": "solution limit"
+  },
+  "totals": {
+   "continuity_breaks": {
+    "after": 38,
+    "before": 35
+   },
+   "driving_minutes": {
+    "after": 449,
+    "before": 411
+   },
+   "minutes_moved": {
+    "after": 325,
+    "before": 0
+   },
+   "uncovered": {
+    "after": 8,
+    "before": 8
+   }
+  },
+  "work": [
+   {
+    "after": 324,
+    "before": 246,
+    "carer": "K02",
+    "limit": 360,
+    "reordered": false
+   },
+   {
+    "after": 150,
+    "before": 412,
+    "carer": "K15",
+    "limit": 450,
+    "reordered": false
+   },
+   {
+    "after": 358,
+    "before": 289,
+    "carer": "K16",
+    "limit": 360,
+    "reordered": false
+   },
+   {
+    "after": 326,
+    "before": 282,
+    "carer": "K19",
+    "limit": 360,
+    "reordered": false
+   },
+   {
+    "after": 351,
+    "before": 276,
+    "carer": "K22",
+    "limit": 450,
+    "reordered": false
+   },
+   {
+    "after": 314,
+    "before": 313,
+    "carer": "K25",
+    "limit": 360,
+    "reordered": false
+   },
+   {
+    "after": 279,
+    "before": 246,
+    "carer": "K29",
+    "limit": 360,
+    "reordered": false
+   }
+  ]
+ },
+ "synthetic": true,
+ "uncovered": {
+  "21": [
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V02916"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V02940"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V02957"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V02963"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03033"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V02917"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V02958"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V02964"
+   }
+  ],
+  "22": [
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03054"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03078"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03095"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03101"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03171"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03055"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03096"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03102"
+   }
+  ],
+  "23": [
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03192"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03216"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03233"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03239"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03309"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03193"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03234"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03240"
+   }
+  ],
+  "24": [
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03330"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03354"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03371"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03377"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03447"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03331"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03372"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03378"
+   }
+  ],
+  "25": [
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03468"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03492"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03509"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03515"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03585"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03469"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03510"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03516"
+   }
+  ],
+  "26": [
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03606"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03630"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03647"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03653"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03723"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03607"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03648"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03654"
+   }
+  ],
+  "27": [
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03744"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03768"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03785"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03791"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03861"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03745"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03786"
+   },
+   {
+    "reason": "needs two carers (not planned yet)",
+    "visit": "V03792"
+   }
+  ]
+ }
+}

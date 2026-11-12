@@ -1,0 +1,100 @@
+# cloudflared, the live link's only way in. Applied only by `scripts/cluster.py up --live`, after
+# compose's tunnel has stopped: two connectors of one tunnel must never serve two different apps.
+# Its config and key come from a Secret that scripts/cluster.py makes from the laptop's folder.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tunnel
+  namespace: homecare
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tunnel
+  namespace: homecare
+spec:
+  # Cloudflare: replicas of one tunnel are for high availability, not load balancing.
+  replicas: 2
+  # Replace one pod at a time with no extra pod, so each new pod goes to the worker left
+  # without one; with an extra pod, an update put both on one worker (12 Nov).
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: tunnel
+  template:
+    metadata:
+      labels:
+        app: tunnel
+    spec:
+      serviceAccountName: tunnel
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      # One replica on each worker, so losing a node leaves the other one connected. Honor
+      # leaves out the control plane, which these pods cannot use; counted as a node with none,
+      # it blocked every update's extra pod (12 Nov).
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: tunnel
+      containers:
+        - name: cloudflared
+          # cloudflared 2026.10.7, the same digest as compose.yaml.
+          image: cloudflare/cloudflared:2026.10.7@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
+          args:
+            - tunnel
+            - --no-autoupdate
+            - --metrics
+            - 0.0.0.0:2000
+            - --config
+            - /etc/cloudflared/config.yml
+            - run
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+          # /ready answers 200 only while connected to Cloudflare's edge. Cloudflare's example
+          # restarts cloudflared if it is not connected 10 s after starting; just after a Docker
+          # restart the cluster's DNS is slow, and that check restarted it in a loop (12 Nov).
+          # So it gets up to 60 s to connect, then a restart only after 30 s without the edge.
+          startupProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            periodSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: tunnel
+              mountPath: /etc/cloudflared
+              readOnly: true
+      volumes:
+        - name: tunnel
+          secret:
+            secretName: tunnel

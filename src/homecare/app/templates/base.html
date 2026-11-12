@@ -2,29 +2,39 @@
 <html lang="en-GB">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a2025" media="(prefers-color-scheme: dark)">
   <title>{% block title %}{% endblock %} · Home-care intelligence (synthetic)</title>
   <link rel="stylesheet" href="/static/app.css">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  {% block head %}{% endblock %}
 </head>
 <body>
   <a class="skip" href="#main">Skip to the main content</a>
-  <p class="synthetic">SYNTHETIC data: no real person, client, carer or provider.{% if demo %} Demo mode: anyone may take any role, and everything resets when the service restarts.{% endif %}</p>
-  <header class="masthead">
-    <div>{% block masthead %}{% endblock %}</div>
-    {% if user %}
-    <div class="account">
-      <span>Signed in as <strong>{{ user }}</strong></span>
-      <form method="post" action="/signout">
-        <input type="hidden" name="csrf" value="{{ csrf }}">
-        <button class="quiet" type="submit">Sign out</button>
-      </form>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <a class="brand" href="/"><svg class="mark" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><rect width="512" height="512" rx="112" fill="#1d7a48"/><rect x="136" y="112" width="240" height="288" rx="28" fill="#ffffff"/><path d="M184 168H328M184 212H328" stroke="#c3cbd2" stroke-width="16" stroke-linecap="round"/><path d="M190 316l42 40 92-92" fill="none" stroke="#1d7a48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="brand-name">Home-care<span class="brand-rest"> intelligence</span></span></a>
+      <span class="tag synthetic">SYNTHETIC</span>
+      {% if user %}
+      <div class="account">
+        <span class="who"><span class="visually-hidden">Signed in as </span>{{ user }}</span>
+        <form method="post" action="/signout">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="button quiet" type="submit">Sign out</button>
+        </form>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
   </header>
-  <main id="main" class="page">
+  <main id="main" class="page{% block page_class %}{% endblock %}" data-rendered="{{ rendered }}">
     {% block main %}{% endblock %}
   </main>
-  <footer class="page footer"><small>Build {{ build }}</small></footer>
+  <footer class="footer">
+    <p><strong>SYNTHETIC data:</strong> no real person, client, carer or provider.{% if demo %} Demo mode: anyone may take any role, and everything resets when the service restarts.{% endif %}</p>
+    <p>Build {{ build }}</p>
+  </footer>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1,40 +1,61 @@
 {% extends "base.html" %}
 {% block title %}Sign in{% endblock %}
-{% block masthead %}
-<h1>Home-care intelligence</h1>
-<p class="form-line">Care-note review for one synthetic agency</p>
-{% endblock %}
+{% block page_class %} signin{% endblock %}
 {% block main %}
-<div class="signin">
-  <p>Carers' visit notes are read by a local model for safeguarding concerns, signs of deterioration and missed tasks. Every finding quotes the words it rests on, and a person decides each one.</p>
-  {% if message %}<p class="alert" role="alert">{{ message }}</p>{% endif %}
-  {% if demo %}
-  <form method="post" action="/signin">
+<div class="page-head">
+  <h1>Sign in</h1>
+  <p class="sub">Care-note review for one synthetic home-care agency. Carers' visit notes are read by a local model for safeguarding concerns, signs of deterioration and missed tasks; every finding quotes the words it rests on, and a person decides each one.</p>
+</div>
+{% if message %}<p class="alert" role="alert">{{ message }}</p>{% endif %}
+{% if demo %}
+<div class="roles">
+  <form class="card" method="post" action="/signin">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>Carer</h2>
+    <p>Your visits for the day, where to go next, and writing each visit up, with or without signal.</p>
+    <div class="field">
+      <label for="carer">Your carer number</label>
+      <select id="carer" name="user">
+        {% for carer in carers %}<option>{{ carer }}</option>{% endfor %}
+      </select>
+    </div>
+    <p class="meta">On a phone, add this app to your home screen from the browser's menu to use it like any other app.</p>
+    <div class="actions"><button class="button primary" type="submit">Sign in as this carer</button></div>
+  </form>
+  <form class="card" method="post" action="/signin">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="user" value="lead">
     <h2>Safeguarding lead</h2>
-    <p>Review the day's register of flagged notes and record a decision on each finding.</p>
-    <button class="ink" type="submit">Sign in as the safeguarding lead</button>
+    <p>The day's register of flagged notes, in the order to review them, and a decision on each finding.</p>
+    <div class="actions"><button class="button secondary" type="submit">Sign in as the safeguarding lead</button></div>
   </form>
-  <form method="post" action="/signin">
+  <form class="card" method="post" action="/signin">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    <h2>Carer</h2>
-    <p>See one carer's planned visits for a day and their own notes.</p>
-    <label for="carer">Carer</label>
-    <select id="carer" name="user">
-      {% for carer in carers %}<option>{{ carer }}</option>{% endfor %}
-    </select>
-    <button class="ink" type="submit">Sign in as this carer</button>
+    <input type="hidden" name="user" value="coordinator">
+    <h2>Coordinator</h2>
+    <p>What an old care system's visit export brought in, and which rows were held back and why.</p>
+    <div class="actions"><button class="button secondary" type="submit">Sign in as the coordinator</button></div>
   </form>
-  {% else %}
-  <form method="post" action="/signin">
+  <form class="card" method="post" action="/signin">
     <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="user" value="manager">
+    <h2>Manager</h2>
+    <p>Which carers might benefit from a conversation about their workload, and why.</p>
+    <div class="actions"><button class="button secondary" type="submit">Sign in as the manager</button></div>
+  </form>
+</div>
+{% else %}
+<form class="card" method="post" action="/signin">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="field">
     <label for="user">Username</label>
     <input id="user" name="user" autocomplete="username" required>
+  </div>
+  <div class="field">
     <label for="password">Password</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required>
-    <button class="ink" type="submit">Sign in</button>
-  </form>
-  {% endif %}
-</div>
+  </div>
+  <div class="actions"><button class="button primary" type="submit">Sign in</button></div>
+</form>
+{% endif %}
 {% endblock %}

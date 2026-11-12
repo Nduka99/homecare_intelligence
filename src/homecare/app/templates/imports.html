@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "marks.html" import coordinator_nav %}
+{% block title %}Visit import{% endblock %}
+{% block page_class %} wide{% endblock %}
+{% block main %}
+<div class="page-head">
+  {{ coordinator_nav("imports") }}
+  <h1>Visit import</h1>
+  <p class="sub">Coordinator · an old care system's visit records</p>
+</div>
+<p class="lead-in">An old care system's export of visits, checked row by row against the plan before anything is used. A row that cannot be trusted is held in quarantine with its reasons, never repaired by guessing; fix it in the old system and export again. A row that can be used but needs a look is kept with a flag.</p>
+{% if not report %}
+<p class="card empty">No export has been imported yet. On the laptop: <code>homecare platform import FILE</code>.</p>
+{% else %}
+<section class="card" aria-labelledby="file-title">
+  <h2 id="file-title">The file</h2>
+  <dl class="details">
+    <dt>File</dt><dd>{{ report.name }}, SHA-256 <code>{{ report.sha256[:12] }}</code></dd>
+    <dt>Imported</dt><dd><span class="figure">{{ report.imported }}</span> UTC, by {{ report.by }}</dd>
+  </dl>
+  <p class="tally"><span><strong>{{ report.kept }}</strong> rows kept, {{ report.flagged }} of them flagged</span> <span><strong>{{ report.quarantined }}</strong> in quarantine</span> <span><strong>{{ report.blank }}</strong> blank {{ "line" if report.blank == 1 else "lines" }} skipped</span></p>
+</section>
+
+{% set cell_names = ["Visit Ref", "Client Ref", "Carer Ref", "Visit Date", "Check In", "Check Out"] %}
+<div class="band-head">
+  <h2 id="quarantine-title"><span class="tag">Quarantine</span></h2>
+  <span class="count">{{ report.quarantined }}</span>
+</div>
+<p class="lead-in">Each row exactly as the file had it. Several rows for one visit, or one carer in two places at once, cannot be settled from the file, so every row involved is held.</p>
+<ol class="list held" aria-labelledby="quarantine-title">
+  {% for row in report.held %}
+  <li>
+    <p><strong>Line {{ row.line }}</strong></p>
+    <p class="reasons">{{ row.reasons | join("; ") | capitalize }}{% if row.related %} (see line {{ row.related | join(", ") }}){% endif %}</p>
+    <details class="row-cells">
+      <summary>The row as the file had it</summary>
+      <dl class="cells">
+        {% for cell in row.cells %}<div><dt>{{ cell_names[loop.index0] }}</dt><dd>{{ cell if cell else "(empty)" }}</dd></div>{% endfor %}
+      </dl>
+    </details>
+  </li>
+  {% endfor %}
+</ol>
+
+<div class="band-head">
+  <h2 id="flagged-title"><span class="tag visit">Kept, with a flag</span></h2>
+  <span class="count">{{ report.flagged }}</span>
+</div>
+<ol class="list held" aria-labelledby="flagged-title">
+  {% for row in report.flagged_rows %}
+  <li>
+    <p><strong>Line {{ row.line }}</strong></p>
+    <p class="reasons">{{ row.flags | join("; ") | capitalize }}</p>
+    <details class="row-cells">
+      <summary>The row as kept</summary>
+      <dl class="cells">
+        <div><dt>Visit Ref</dt><dd>{{ row.visit }}</dd></div>
+        <div><dt>Carer Ref</dt><dd>{{ row.carer }}</dd></div>
+        <div><dt>Visit Date</dt><dd>{{ row.date }}</dd></div>
+        <div><dt>Check In</dt><dd>{{ row.check_in }}</dd></div>
+        <div><dt>Check Out</dt><dd>{{ row.check_out }}</dd></div>
+      </dl>
+    </details>
+  </li>
+  {% endfor %}
+</ol>
+{% endif %}
+{% endblock %}

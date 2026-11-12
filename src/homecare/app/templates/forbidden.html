@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}No access{% endblock %}
-{% block masthead %}<h1>No access to this page</h1>{% endblock %}
 {% block main %}
-<p class="empty">Your role cannot open this page. Carers see their own visits and notes; the safeguarding lead sees the review register.</p>
-<p><a href="/">Go to your start page</a></p>
+<div class="card">
+  <h1>No access to this page</h1>
+  <p class="lead-in">Your role cannot open this page. Carers see their own visits and notes, the safeguarding lead sees the review register, the manager sees the care team, and the coordinator sees the rota and visit imports.</p>
+  <div class="actions"><a class="button secondary" href="/">Go to your start page</a></div>
+</div>
 {% endblock %}

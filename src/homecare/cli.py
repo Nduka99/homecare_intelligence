@@ -9,6 +9,8 @@
     homecare world build [--seed N]         build the synthetic agency on the pinned map
     homecare rota sweep                     compare continuity weightings on one week
     homecare rota plan                      plan the demo week's rota
+    homecare rota replan --carer K --at T  re-plan a demo day after a carer drops out
+    homecare rota replan-sweep              measure the re-plan's time-move weight
     homecare evaluate notes --model M SET...  score a run
     homecare evaluate rank --model M --arm A SET...  the queue-ranking study (laptop only)
     homecare evaluate tamper SET...         the tamper-tag study (laptop only)
@@ -17,6 +19,7 @@
     homecare attack llmail --model M        adapt and register human attacks from LLMail-Inject
     homecare platform seed                  write the platform's SYNTHETIC demo-week seed and pin
     homecare platform user NAME --role R    add or reset a laptop account (password asked)
+    homecare retention run                  simulate the workforce, fit and check the model
 
 Data lives in the git-ignored `data/` folder: `data/eval/<set>/` (registered sets),
 `data/runs/<set>/<model>--<pipeline>.jsonl` (runs) and `data/reports/` (scores).
@@ -27,17 +30,20 @@ import getpass
 import hashlib
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
 import uvicorn
 
 from homecare import llm, models, nli, tamper
-from homecare.app import auth, db
+from homecare.app import auditlog, auth, db, importer, maps, reader, screens
 from homecare.app import main as app_main
 from homecare.app import seed as platform_seed
 from homecare.evaluation import attack, llmail, ranking, search, sets, tampering
 from homecare.evaluation import notes as notes_score
+from homecare.imports import sample as import_sample
+from homecare.imports import validate as import_validate
 from homecare.matching import baseline, check, sweep
 from homecare.notes import extract
 from homecare.world import agency, roads, writer
@@ -65,7 +71,10 @@ DEMO = "demo-week"
 DEMO_DAYS = range(21, 28)
 DEMO_SEED = 909
 DEMO_ROTA = DATA / "rota" / "demo-week.json"
+# The rota data the app shows the coordinator: committed and pinned, like the seed.
+ROTA_APP = platform_seed.FILE.with_name("rota.json")
 DEMO_MODEL = "gemma-4-26b-a4b"  # the extraction the platform shows
+RETENTION = DATA / "retention"
 MIN_PASSWORD = 15
 
 
@@ -120,6 +129,39 @@ def write_set(
     return written
 
 
+def run_retention() -> None:
+    """Simulate the SYNTHETIC workforce, fit the retention model on months 1-18 and check it on
+    months 19-24 against the simulator's true probabilities."""
+    from homecare.retention import evaluate, model, simulate  # laptop only (scikit-learn)
+
+    intercept = simulate.tune_intercept()
+    rows = simulate.simulate(intercept)
+    fitted = model.fit(rows)
+    report: dict[str, Any] = {
+        "intercept": intercept,
+        "annual_event_rate": simulate.annual_rate(rows),
+    }
+    report |= evaluate.evaluate(rows, fitted)
+    RETENTION.mkdir(parents=True, exist_ok=True)
+    (RETENTION / "model.json").write_text(json.dumps(fitted, indent=1) + "\n", encoding="utf-8")
+    (RETENTION / "report.json").write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
+    found = report["auroc"]
+    print(f"person-months {len(rows)}; annual event rate {report['annual_event_rate']:.3f}")
+    months, resigned = report["test_person_months"], report["test_resignations"]
+    print(f"test: {months} person-months, {resigned} resignations")
+    print(f"AUROC {found['auroc']:.3f} ({found['low']:.3f}-{found['high']:.3f}); "
+          f"shuffled {report['controls']['shuffled_labels_auroc']:.3f}; "
+          f"truth as score {report['controls']['truth_as_score_auroc']:.3f}")  # fmt: skip
+    print(f"calibration: annual gap {report['calibration']['annual_gap']:+.4f}, "
+          f"slope {report['calibration']['slope']:.3f}; Brier {report['brier']['model']:.5f} "
+          f"vs base rate {report['brier']['base_rate']:.5f}")  # fmt: skip
+    for attribute, groups in report["fairness"].items():
+        for group, found in groups.items():
+            print(f"  {attribute} {group}: annual gap {found['annual_gap']:+.4f}, "
+                  f"FPR at flag {found['false_positive_rate']:.3f}")  # fmt: skip
+    print(f"label audit: {report['label_audit']}")
+
+
 def run_platform_user(name: str, role: str, carer: str | None) -> None:
     """Add or reset an account in the laptop's accounts-mode database. The password is read
     without echo and needs at least 15 characters (NIST SP 800-63B, single-factor)."""
@@ -142,6 +184,70 @@ def run_platform_user(name: str, role: str, carer: str | None) -> None:
     print(f"account {name!r} ({role}) saved in {path}")
 
 
+ANSWERS = Path("tests") / "data" / "visit-export-answers.json"
+
+
+def run_export_sample() -> None:
+    """Write the SYNTHETIC sample visit export (with planted faults), its pin and its answers."""
+    text, answers = import_sample.build(platform_seed.load())
+    data = text.encode("utf-8")
+    importer.SAMPLE.write_bytes(data)
+    importer.SAMPLE_PIN.write_text(
+        hashlib.sha256(data).hexdigest() + "\n", encoding="utf-8", newline="\n"
+    )
+    ANSWERS.parent.mkdir(parents=True, exist_ok=True)
+    ANSWERS.write_text(json.dumps(answers, indent=1) + "\n", encoding="utf-8", newline="\n")
+    print(f"{importer.SAMPLE}: {len(answers['lines'])} rows; answers in {ANSWERS}")
+
+
+def run_platform_import(file: Path) -> None:
+    """Check and store a visit export in the laptop's accounts-mode database, audited by its
+    SHA-256 and counts only (never a cell)."""
+    settings = app_main.settings_from_env()
+    if settings["mode"] != "accounts":
+        raise SystemExit("set SIGN_IN=accounts: demo mode imports only the committed sample")
+    seed = platform_seed.load()
+    db.prepare(settings["database"], seed)
+    connection = db.connect(settings["database"])
+    try:
+        found = importer.store(
+            connection, file.read_bytes(), file.name, "command line", importer.reference(seed)
+        )
+    except import_validate.Refused as refusal:
+        raise SystemExit(f"refused, nothing stored: {refusal}") from refusal
+    entry = {"at": time.time(), "event": "import", "user": "command line",
+             "sha256": found["sha256"], "kept": found["kept"],
+             "quarantined": found["quarantined"], "new": found["new"]}  # fmt: skip
+    auditlog.record(connection, settings["key"], settings["anchor"], entry)
+    connection.close()
+    if not found["new"]:
+        print("this file was imported before; nothing added")
+    print(f"kept {found['kept']} ({found['flagged']} flagged), quarantined {found['quarantined']}")
+
+
+def run_platform_read() -> None:
+    """Have the laptop's model read the app notes it has not read yet, in the accounts-mode
+    database; each read is audited by note ID only."""
+    settings = app_main.settings_from_env()
+    if settings["mode"] != "accounts":
+        raise SystemExit("set SIGN_IN=accounts: a demo's notes live only in its running process")
+    db.prepare(settings["database"], platform_seed.load())
+    connection = db.connect(settings["database"])
+    if not reader.unread(connection):
+        connection.close()
+        print("every app note has been read")
+        return
+    header = {"model": DEMO_MODEL, "sha256": models.entry(DEMO_MODEL)["sha256"],
+              "prompt": extract.PROMPT_HASH, "pipeline": extract.PIPELINE}  # fmt: skip
+    with models.served(DEMO_MODEL, PORT, DATA / "logs" / f"{DEMO_MODEL}.log") as url:
+        done = reader.read_all(connection, lambda text: extract.extract(url, text), header)
+    for note in done["read"]:
+        entry = {"at": time.time(), "event": "model read", "user": "command line", "note": note}
+        auditlog.record(connection, settings["key"], settings["anchor"], entry)
+    connection.close()
+    print(f"read {len(done['read'])}; failed {len(done['failed'])} (still listed as unread)")
+
+
 def run_platform_seed() -> None:
     """Write the SYNTHETIC demo-week seed the platform loads, and its pin. The PIGuard scores must
     come from the pinned checkpoint."""
@@ -153,8 +259,13 @@ def run_platform_seed() -> None:
     scores = json.loads((DATA / "runs" / DEMO / f"{tamper.NAME}.json").read_text(encoding="utf-8"))
     if scores["sha256"] != models.entry(tamper.NAME)["files"]["model.safetensors"]["sha256"]:
         raise SystemExit("the demo week's PIGuard scores are not from the pinned checkpoint")
+    from homecare.retention import demo  # plain Python, but only the seed needs it
+
+    fitted = json.loads((RETENTION / "model.json").read_text(encoding="utf-8"))
+    today = screens.date_of(world["start"], DEMO_DAYS[-1] + 1).isoformat()
+    retention = {"model": fitted, "carers": demo.known_now(world, rotas, today)}
     text = platform_seed.dumps(
-        platform_seed.build(world, rotas, list(DEMO_DAYS), notes, run, scores)
+        platform_seed.build(world, rotas, list(DEMO_DAYS), notes, run, scores, retention)
     )
     platform_seed.FILE.parent.mkdir(parents=True, exist_ok=True)
     platform_seed.FILE.write_text(text, encoding="utf-8", newline="\n")
@@ -200,6 +311,109 @@ def run_plan(continuity: int, high_need: int) -> None:
     DEMO_ROTA.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
     for label, row in report["totals"].items():
         print(f"{label:9}", "  ".join(f"{k} {v}" for k, v in row.items()))
+
+
+def run_replan(day: int, out: str, at_text: str) -> None:
+    """Re-plan a demo day after a carer drops out, check it three ways, and save it
+    for the coordinator's screen beside the planned week's uncovered visits and their reasons."""
+    from homecare.matching import replan  # laptop-only, as in run_map
+
+    world = json.loads(WORLD.read_text(encoding="utf-8"))
+    plan = json.loads(DEMO_ROTA.read_text(encoding="utf-8"))
+    if day not in DEMO_DAYS:
+        raise SystemExit(f"day {day} is not in the demo week ({DEMO_DAYS[0]}-{DEMO_DAYS[-1]})")
+    hours, mins = at_text.split(":")
+    at = int(hours) * 60 + int(mins)
+    before = plan["rotas"][list(DEMO_DAYS).index(day)]
+    after = replan.replan(world, before, day, out, at, plan["continuity"], plan["high_need"])
+    problems = check.check(after, world, day, after["holds"])["problems"]
+    problems += check.unmoved(before, after, world, day, out, at)
+    problems += check.reason_problems(after, world, day, after["holds"], out)
+    if problems:
+        raise SystemExit("the re-plan fails its checks, nothing saved: " + "; ".join(problems))
+    uncovered = {}
+    for each_day, rota in zip(DEMO_DAYS, plan["rotas"], strict=True):
+        uncovered[str(each_day)] = rota["uncovered"]
+    summary = replan.summarise(world, day, before, after, out, at)
+    # The whole re-planned day too, so a test can check the committed scenario again.
+    summary["rota"] = {key: after[key] for key in ("routes", "uncovered", "holds")}
+    data = {
+        "synthetic": True,
+        "about": "SYNTHETIC rota data for the demo week: no real person, client or carer.",
+        "uncovered": uncovered,
+        "replan": summary,
+    }
+    text = platform_seed.dumps(data)
+    ROTA_APP.write_text(text, encoding="utf-8", newline="\n")
+    ROTA_APP.with_name("rota.json.sha256").write_text(
+        platform_seed.sha256(text) + "\n", encoding="utf-8", newline="\n"
+    )
+    print(f"{out} out at {at_text} on day {day}: {len(summary['changes'])} visits change;",
+          summary["totals"], summary["search"])  # fmt: skip
+    for change in summary["changes"]:
+        print(" ", change)
+    for row in summary["work"]:
+        print(" ", row)
+
+
+REPLAN_WEIGHTS = [0, 1, 2, 4, 8]  # tenths of a driving minute per minute a visit moves
+SWEEP_AT = 600  # each fresh drop-out is at 10:00
+
+
+def busiest_after(world: dict[str, Any], rota: dict[str, Any], day: int, at: int) -> str:
+    """The carer with the most visits planned to start at or after `at` (lowest ID on a tie)."""
+    nodes = {client["id"]: client["node"] for client in world["clients"]}
+    carers = {carer["id"]: carer for carer in world["carers"]}
+    by_id = {visit["id"]: visit for visit in world["visits"] if visit["day"] == day}
+    counts: list[tuple[int, str]] = []
+    for carer_id, route in sorted(rota["routes"].items()):
+        plan = check.timeline([by_id[v] for v in route], carers[carer_id], nodes, world)
+        counts.append((-sum(1 for stop in plan["stops"] if stop["starts"] >= at), carer_id))
+    return min(counts)[1]
+
+
+def run_replan_sweep() -> None:
+    """The time-move weight measured on fresh drop-outs: on days 21-26 the busiest
+    carer after 10:00 drops out at 10:00, re-planned at each weight, every result checked; the
+    knee of minutes moved picks the weight."""
+    from homecare.matching import replan  # laptop-only, as in run_map
+
+    world = json.loads(WORLD.read_text(encoding="utf-8"))
+    plan = json.loads(DEMO_ROTA.read_text(encoding="utf-8"))
+    rows: dict[int, dict[str, int]] = {}
+    scenarios = []
+    for weight in REPLAN_WEIGHTS:
+        rows[weight] = {"changes": 0, "driving": 0, "breaks": 0, "moved": 0, "problems": 0}
+    for day in DEMO_DAYS[:-1]:
+        before = plan["rotas"][list(DEMO_DAYS).index(day)]
+        out = busiest_after(world, before, day, SWEEP_AT)
+        scenarios.append({"day": day, "out": out})
+        for weight in REPLAN_WEIGHTS:
+            after = replan.replan(world, before, day, out, SWEEP_AT, plan["continuity"],
+                                  plan["high_need"], moved_tenths=weight)  # fmt: skip
+            found = check.check(after, world, day, after["holds"])["problems"]
+            found += check.unmoved(before, after, world, day, out, SWEEP_AT)
+            found += check.reason_problems(after, world, day, after["holds"], out)
+            summary = replan.summarise(world, day, before, after, out, SWEEP_AT)
+            totals = summary["totals"]
+            row = rows[weight]
+            row["changes"] += len(summary["changes"])
+            row["driving"] += (
+                totals["driving_minutes"]["after"] - totals["driving_minutes"]["before"]
+            )
+            row["breaks"] += totals["continuity_breaks"]["after"]
+            row["moved"] += totals["minutes_moved"]["after"]
+            row["problems"] += len(found)
+            moved = totals["minutes_moved"]["after"]
+            print(f"day {day} {out} weight {weight}/10: {len(summary['changes'])} changes, "
+                  f"moved {moved}, problems {len(found)}", flush=True)  # fmt: skip
+    chosen = sweep.knee({w: rows[w]["moved"] for w in REPLAN_WEIGHTS if w > 0})
+    report = {"at": SWEEP_AT, "scenarios": scenarios, "rows": rows, "knee": chosen}
+    out_file = DATA / "rota" / "replan-sweep.json"
+    out_file.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
+    for weight, row in rows.items():
+        print(f"weight {weight}/10", "  ".join(f"{k} {v}" for k, v in row.items()))
+    print(f"knee: {chosen}/10 of a driving minute per minute moved")
 
 
 def templates_by_id() -> dict[str, dict[str, Any]]:
@@ -658,6 +872,18 @@ def run_map() -> None:
     print(f"{pin['file']}: {pin['nodes']} junctions, {pin['edges']} road links, pinned")
 
 
+def run_roads() -> None:
+    """The road file the carer's map draws and routes on (ODbL), and its pin."""
+    from homecare.world import osm  # laptop-only, as in run_map
+
+    map_sha256 = json.loads(osm.PIN.read_text(encoding="utf-8"))["sha256"]
+    found = osm.road_file(osm.load(), map_sha256)
+    text = json.dumps(found, separators=(",", ":"), ensure_ascii=False) + "\n"
+    maps.FILE.write_text(text, encoding="utf-8", newline="\n")
+    maps.PIN.write_text(platform_seed.sha256(text) + "\n", encoding="utf-8", newline="\n")
+    print(f"{maps.FILE}: {len(found['nodes'])} junctions, {len(found['links'])} links, pinned")
+
+
 def world_path(seed: int) -> Path:
     """The demo agency's file; an agency from another seed sits beside it, for checks only."""
     return WORLD if seed == agency.SEED else DATA / "world" / f"agency-seed-{seed}.json"
@@ -714,7 +940,7 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="homecare")
     commands = parser.add_subparsers(dest="command", required=True)
     serve = commands.add_parser("serve", help="run the web app")
-    # Hosts such as Render tell the app its port through PORT.
+    # The container image sets HOST and PORT (Dockerfile).
     serve.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     serve.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     check = commands.add_parser("models", help="check the model files").add_subparsers(
@@ -748,9 +974,20 @@ def main(argv: list[str] | None = None) -> None:
     search_command.add_argument("--attacker", required=True)
     search_command.add_argument("--target", required=True)
     attack_commands.add_parser("llmail").add_argument("--model", required=True)
+    retention = commands.add_parser("retention", help="the retention model (laptop only)")
+    retention.add_subparsers(dest="action", required=True).add_parser(
+        "run", help="simulate the workforce, fit the model and check it"
+    )
     platform = commands.add_parser("platform", help="the web platform's data and accounts")
     platform_commands = platform.add_subparsers(dest="action", required=True)
     platform_commands.add_parser("seed", help="write the SYNTHETIC demo-week seed and its pin")
+    platform_commands.add_parser("read", help="have the laptop's model read unread app notes")
+    platform_commands.add_parser(
+        "export-sample", help="write the SYNTHETIC sample visit export, its pin and its answers"
+    )
+    platform_commands.add_parser("import", help="check and store a visit export").add_argument(
+        "file", type=Path
+    )
     user_command = platform_commands.add_parser("user", help="add or reset a laptop account")
     user_command.add_argument("name")
     user_command.add_argument(
@@ -760,6 +997,7 @@ def main(argv: list[str] | None = None) -> None:
     world = commands.add_parser("world", help="the SYNTHETIC demo agency on a real road map")
     world_commands = world.add_subparsers(dest="action", required=True)
     world_commands.add_parser("map", help="download and pin the road graph, once")
+    world_commands.add_parser("roads", help="write the carer map's road file (ODbL) and its pin")
     build_command = world_commands.add_parser("build", help="build the agency on the pinned map")
     build_command.add_argument("--seed", type=int, default=agency.SEED)
     rota = commands.add_parser("rota", help="plan rotas on the built agency")
@@ -770,6 +1008,11 @@ def main(argv: list[str] | None = None) -> None:
     plan_command = rota_commands.add_parser("plan", help="plan the demo week (days 21-27)")
     plan_command.add_argument("--continuity", type=int, default=sweep.BASE)
     plan_command.add_argument("--high-need", type=int, default=sweep.HIGH_NEED)
+    replan_command = rota_commands.add_parser("replan", help="re-plan a demo day after a drop-out")
+    replan_command.add_argument("--day", type=int, default=DEMO_DAYS[-1])
+    replan_command.add_argument("--carer", required=True)
+    replan_command.add_argument("--at", required=True, help="the drop-out time, HH:MM")
+    rota_commands.add_parser("replan-sweep", help="measure the time-move weight")
     args = parser.parse_args(argv)
 
     if args.command == "serve":
@@ -797,16 +1040,30 @@ def main(argv: list[str] | None = None) -> None:
         run_llmail(args.model)
     elif args.command == "attack":
         run_search(args.attacker, args.target)
+    elif args.command == "retention":
+        run_retention()
     elif args.command == "platform" and args.action == "user":
         run_platform_user(args.name, args.role, args.carer)
+    elif args.command == "platform" and args.action == "read":
+        run_platform_read()
+    elif args.command == "platform" and args.action == "export-sample":
+        run_export_sample()
+    elif args.command == "platform" and args.action == "import":
+        run_platform_import(args.file)
     elif args.command == "platform":
         run_platform_seed()
     elif args.command == "world" and args.action == "map":
         run_map()
+    elif args.command == "world" and args.action == "roads":
+        run_roads()
     elif args.command == "world":
         run_build(args.seed)
     elif args.command == "rota" and args.action == "plan":
         run_plan(args.continuity, args.high_need)
+    elif args.command == "rota" and args.action == "replan":
+        run_replan(args.day, args.carer, args.at)
+    elif args.command == "rota" and args.action == "replan-sweep":
+        run_replan_sweep()
     elif args.command == "rota":
         run_sweep(args.first_day, args.seed)
     elif args.action == "rank":

@@ -1,0 +1,100 @@
+# The app in demo mode: the same hash-locked image as compose.yaml, loaded into the cluster by
+# scripts/cluster.py (never pulled from a registry).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app
+  namespace: homecare
+# No API token in the pod: the app never talks to the cluster (invariant K6).
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: homecare
+spec:
+  # Demo mode keeps its SQLite database in the pod's /tmp, so a second pod would be a second,
+  # different demo. One replica, and the old pod stops before the new one starts.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      serviceAccountName: app
+      automountServiceAccountToken: false
+      # No other Services' addresses as environment variables; the app reads only its own.
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Move off a lost node after 30 seconds instead of Kubernetes' default 300 (invariant K7).
+      tolerations:
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 30
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 30
+      containers:
+        - name: app
+          image: homecare:live
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # Writable, with /dev/shm, which every pod gets (invariant K5); in memory, as in compose.
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+---
+# The tunnel's config.yml already routes to http://app:8000, so it works here unchanged.
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: homecare
+spec:
+  selector:
+    app: app
+  ports:
+    - port: 8000
+      targetPort: 8000

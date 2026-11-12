@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "marks.html" import icon %}
+{% block title %}If {{ plan.out }} stops at {{ plan.at }}{% endblock %}
+{% block main %}
+<div class="page-head">
+  <a class="back" href="/rota?day={{ plan.day }}">{{ icon("back") }}Rota</a>
+  <h1>If {{ plan.out }} stops at {{ plan.at }}</h1>
+  <p class="sub">A saved what-if for {{ long_date }}: {{ plan.out }} calls in sick at {{ plan.at }}. The live rota is unchanged.</p>
+</div>
+
+<section class="card" aria-labelledby="change-title">
+  <h2 id="change-title">What changes</h2>
+  <p class="tally"><span><strong>{{ plan.from_out }}</strong> of {{ plan.out }}'s visits go to other carers{% if plan.made_room %}, and {{ plan.made_room }} other {{ "visit moves" if plan.made_room == 1 else "visits move" }} to make room{% endif %}</span></p>
+  <p>{% if plan.left %}<strong>{{ plan.left | length }}</strong> {{ "visit" if plan.left | length == 1 else "visits" }} newly to arrange by hand.{% else %}No new visit to arrange by hand.{% endif %} The day's {{ plan.already }} {{ "visit" if plan.already == 1 else "visits" }} already left to arrange stay as they were.</p>
+  <dl class="details">
+    <dt>Driving</dt><dd><span class="figure">{{ plan.driving.before }} → {{ plan.driving.after }}</span> minutes in all ({{ "%+d" | format(plan.driving.after - plan.driving.before) }})</dd>
+    <dt>Visit times</dt><dd>Moved <span class="figure">{{ plan.moved }}</span> minutes in all, every move listed below. A client's time is kept unless moving it saves real driving.</dd>
+    <dt>Usual carers</dt><dd>Visits away from the client's usual carer: <span class="figure">{{ plan.breaks.before }} → {{ plan.breaks.after }}</span></dd>
+  </dl>
+  <p class="meta">Checked against every rule of the working day before it was saved: nothing done before {{ plan.at }} moved, and every visit left to arrange has a reason that was tested.</p>
+</section>
+
+<h2 class="section-title">Visits that change carer</h2>
+<ol class="list held">
+  {% for c in plan.changes %}
+  <li>
+    <p><strong>{{ c.client }}</strong>, {{ c.visit | lower }} visit, window <span class="figure window">{{ c.window }}</span>{% if c.made_room %} <span class="tag check">Moved to make room</span>{% endif %}</p>
+    {% if c.after %}
+    <p class="reasons">{{ c.before }} at <span class="figure">{{ c.was }}</span> → <strong>{{ c.after }}</strong> at <span class="figure">{{ c.starts }}</span> · {{ c.shift }}</p>
+    {% else %}
+    <p class="reasons">{{ c.before }} at <span class="figure">{{ c.was }}</span> → <span class="tag">To arrange</span> {{ c.reason }}</p>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>
+
+{% if plan.retimed %}
+<h2 class="section-title">Visits that keep their carer but move</h2>
+<ol class="list held">
+  {% for r in plan.retimed %}
+  <li>
+    <p><strong>{{ r.client }}</strong>, {{ r.visit | lower }} visit, window <span class="figure window">{{ r.window }}</span></p>
+    <p class="reasons">{{ r.carer }} at <span class="figure">{{ r.was }}</span> → <span class="figure">{{ r.starts }}</span> · {{ r.shift }}</p>
+  </li>
+  {% endfor %}
+</ol>
+{% endif %}
+
+<h2 class="section-title">Who picks up more work</h2>
+<p class="lead-in">Working time is care and driving, against each carer's daily limit (a fifth of their weekly hours).</p>
+<ol class="list held">
+  {% for w in plan.work %}
+  <li>
+    <p><strong>{{ w.carer }}</strong>{% if w.added %}: <span class="figure">{{ "%+d" | format(w.added) }}</span> {{ "minute" if w.added | abs == 1 else "minutes" }}{% endif %}{% if w.reordered %} <span class="tag">Same visits, new order</span>{% endif %}</p>
+    <p class="reasons"><span class="figure">{{ w.before }} → {{ w.after }}</span> of {{ w.limit }}</p>
+    {% if w.left <= 15 %}<p><span class="tag visit">Near the daily limit</span> {{ w.left }} {{ "minute" if w.left == 1 else "minutes" }} under</p>{% endif %}
+  </li>
+  {% endfor %}
+</ol>
+{% endblock %}

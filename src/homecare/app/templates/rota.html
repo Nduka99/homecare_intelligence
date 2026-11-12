@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "marks.html" import icon, days, route_sketch, coordinator_nav %}
+{% set current_day = week | selectattr("day", "equalto", day) | first %}
+{% block title %}Rota, {{ current_day.long }}{% endblock %}
+{% block page_class %} wide{% endblock %}
+{% block main %}
+<div class="page-head">
+  {{ coordinator_nav("rota") }}
+  <h1>Rota</h1>
+  <p class="sub">{{ current_day.long }} · {{ rota.team | length }} carers working · {{ rota.covered }} visits planned · {{ rota.uncovered | length }} to arrange by hand</p>
+  {{ days(week, day, link) }}
+</div>
+
+<div class="split queue">
+  <div class="pane-detail">
+    {% if rota.chosen %}
+    <section class="card" aria-labelledby="carer-title">
+      <h2 id="carer-title">{{ rota.chosen }}'s day</h2>
+      <figure class="route">
+        {{ route_sketch(sketch, "", rota.chosen ~ "'s route: from home through visits 1 to " ~ (rota.route | length) ~ " in order and back, numbered as in the list below.") }}
+        <figcaption>Numbered markers are {{ rota.chosen }}'s visits; the hollow square is home. Map data © <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer">OpenStreetMap contributors</a>, <a href="/map-data">map data (ODbL)</a>.</figcaption>
+      </figure>
+      <ol class="list visits">
+        {% for v in rota.route %}
+        <li>
+          <span class="sec" aria-hidden="true">{{ loop.index }}</span>
+          <div>
+            <p class="what"><span class="visually-hidden">Visit {{ loop.index }}: </span><strong>{{ v.client }}</strong>, {{ v.visit | lower }} visit</p>
+            <p class="when"><span class="figure">{{ v.starts }}–{{ v.ends }}</span> · window <span class="figure window">{{ v.window }}</span></p>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+      <div class="actions"><a class="button secondary" href="/rota?day={{ day }}">Close {{ rota.chosen }}'s day</a></div>
+    </section>
+    {% endif %}
+
+    <section class="card" aria-labelledby="arrange-title">
+      <h2 id="arrange-title">To arrange by hand</h2>
+      {% if rota.groups %}
+      {% for group in rota.groups %}
+      <p class="group-reason"><strong>{{ group.reason }}</strong> <span class="count">{{ group.visits | length }}</span></p>
+      <ul class="list held">
+        {% for v in group.visits %}
+        <li><p><strong>{{ v.client }}</strong>, {{ v.visit | lower }} visit, <span class="figure window">{{ v.window }}</span></p></li>
+        {% endfor %}
+      </ul>
+      {% endfor %}
+      {% else %}
+      <p class="empty">Every visit on this day is planned.</p>
+      {% endif %}
+    </section>
+
+    {% if replan.day == day %}
+    <section class="card" aria-labelledby="whatif-title">
+      <h2 id="whatif-title">If {{ replan.out }} stops at {{ "%02d:%02d" | format(replan.at // 60, replan.at % 60) }}</h2>
+      <p>A saved what-if for this day, checked against every rule of the working day: who takes {{ replan.out }}'s visits, which times move and who gets more work.</p>
+      <div class="actions"><a class="button secondary" href="/rota/replan">See the re-plan</a></div>
+    </section>
+    {% endif %}
+  </div>
+
+  <nav class="pane-list" aria-label="Carers working">
+    <div class="band-head">
+      <h2 id="team-title">Carers working</h2>
+      <span class="count">{{ rota.team | length }}</span>
+    </div>
+    <ol class="list" aria-labelledby="team-title">
+      {% for row in rota.team %}
+      <li>
+        <a class="row plain" href="/rota?day={{ day }}&amp;carer={{ row.carer }}"{% if row.carer == rota.chosen %} aria-current="page"{% endif %}>
+          <span class="row-main">
+            <span class="row-title">{{ row.carer }}</span>
+            <span class="row-meta">{{ row.visits }} {{ "visit" if row.visits == 1 else "visits" }} · <span class="figure">{{ row.from }}–{{ row.to }}</span></span>
+          </span>
+          <span class="chevron">{{ icon("chevron") }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+  </nav>
+</div>
+{% endblock %}

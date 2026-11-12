@@ -1,0 +1,3554 @@
+{
+ "about": "SYNTHETIC: what each line of the sample export must get, from the planting",
+ "blank": 2,
+ "lines": {
+  "2": {
+   "quarantined": [],
+   "flags": []
+  },
+  "3": {
+   "quarantined": [],
+   "flags": []
+  },
+  "4": {
+   "quarantined": [],
+   "flags": []
+  },
+  "5": {
+   "quarantined": [],
+   "flags": []
+  },
+  "6": {
+   "quarantined": [],
+   "flags": []
+  },
+  "7": {
+   "quarantined": [],
+   "flags": []
+  },
+  "8": {
+   "quarantined": [],
+   "flags": []
+  },
+  "9": {
+   "quarantined": [],
+   "flags": []
+  },
+  "10": {
+   "quarantined": [],
+   "flags": []
+  },
+  "11": {
+   "quarantined": [],
+   "flags": [
+    "started over 30 minutes late"
+   ]
+  },
+  "12": {
+   "quarantined": [],
+   "flags": []
+  },
+  "13": {
+   "quarantined": [],
+   "flags": []
+  },
+  "14": {
+   "quarantined": [],
+   "flags": []
+  },
+  "15": {
+   "quarantined": [],
+   "flags": []
+  },
+  "16": {
+   "quarantined": [],
+   "flags": []
+  },
+  "17": {
+   "quarantined": [],
+   "flags": []
+  },
+  "18": {
+   "quarantined": [],
+   "flags": []
+  },
+  "19": {
+   "quarantined": [],
+   "flags": []
+  },
+  "20": {
+   "quarantined": [],
+   "flags": []
+  },
+  "21": {
+   "quarantined": [],
+   "flags": []
+  },
+  "22": {
+   "quarantined": [],
+   "flags": []
+  },
+  "23": {
+   "quarantined": [],
+   "flags": []
+  },
+  "24": {
+   "quarantined": [],
+   "flags": []
+  },
+  "25": {
+   "quarantined": [],
+   "flags": []
+  },
+  "26": {
+   "quarantined": [],
+   "flags": []
+  },
+  "27": {
+   "quarantined": [],
+   "flags": []
+  },
+  "28": {
+   "quarantined": [],
+   "flags": []
+  },
+  "29": {
+   "quarantined": [],
+   "flags": []
+  },
+  "30": {
+   "quarantined": [],
+   "flags": []
+  },
+  "31": {
+   "quarantined": [],
+   "flags": []
+  },
+  "32": {
+   "quarantined": [],
+   "flags": []
+  },
+  "33": {
+   "quarantined": [],
+   "flags": []
+  },
+  "34": {
+   "quarantined": [],
+   "flags": []
+  },
+  "35": {
+   "quarantined": [],
+   "flags": []
+  },
+  "36": {
+   "quarantined": [],
+   "flags": []
+  },
+  "37": {
+   "quarantined": [],
+   "flags": []
+  },
+  "38": {
+   "quarantined": [
+    "missing check-out"
+   ],
+   "flags": []
+  },
+  "39": {
+   "quarantined": [],
+   "flags": []
+  },
+  "40": {
+   "quarantined": [],
+   "flags": []
+  },
+  "41": {
+   "quarantined": [],
+   "flags": []
+  },
+  "42": {
+   "quarantined": [],
+   "flags": []
+  },
+  "43": {
+   "quarantined": [],
+   "flags": []
+  },
+  "44": {
+   "quarantined": [],
+   "flags": []
+  },
+  "45": {
+   "quarantined": [],
+   "flags": []
+  },
+  "46": {
+   "quarantined": [],
+   "flags": []
+  },
+  "47": {
+   "quarantined": [],
+   "flags": []
+  },
+  "48": {
+   "quarantined": [],
+   "flags": []
+  },
+  "49": {
+   "quarantined": [],
+   "flags": []
+  },
+  "50": {
+   "quarantined": [],
+   "flags": []
+  },
+  "51": {
+   "quarantined": [],
+   "flags": []
+  },
+  "52": {
+   "quarantined": [],
+   "flags": []
+  },
+  "53": {
+   "quarantined": [],
+   "flags": []
+  },
+  "54": {
+   "quarantined": [],
+   "flags": []
+  },
+  "55": {
+   "quarantined": [
+    "unknown client"
+   ],
+   "flags": []
+  },
+  "56": {
+   "quarantined": [],
+   "flags": []
+  },
+  "57": {
+   "quarantined": [],
+   "flags": []
+  },
+  "58": {
+   "quarantined": [],
+   "flags": []
+  },
+  "59": {
+   "quarantined": [],
+   "flags": []
+  },
+  "60": {
+   "quarantined": [],
+   "flags": []
+  },
+  "61": {
+   "quarantined": [],
+   "flags": []
+  },
+  "62": {
+   "quarantined": [],
+   "flags": []
+  },
+  "63": {
+   "quarantined": [],
+   "flags": []
+  },
+  "64": {
+   "quarantined": [],
+   "flags": []
+  },
+  "65": {
+   "quarantined": [],
+   "flags": []
+  },
+  "66": {
+   "quarantined": [],
+   "flags": []
+  },
+  "67": {
+   "quarantined": [],
+   "flags": []
+  },
+  "68": {
+   "quarantined": [],
+   "flags": []
+  },
+  "69": {
+   "quarantined": [],
+   "flags": []
+  },
+  "70": {
+   "quarantined": [],
+   "flags": []
+  },
+  "71": {
+   "quarantined": [],
+   "flags": []
+  },
+  "72": {
+   "quarantined": [],
+   "flags": []
+  },
+  "73": {
+   "quarantined": [],
+   "flags": []
+  },
+  "74": {
+   "quarantined": [],
+   "flags": []
+  },
+  "75": {
+   "quarantined": [],
+   "flags": []
+  },
+  "76": {
+   "quarantined": [],
+   "flags": []
+  },
+  "77": {
+   "quarantined": [],
+   "flags": []
+  },
+  "78": {
+   "quarantined": [],
+   "flags": []
+  },
+  "79": {
+   "quarantined": [],
+   "flags": []
+  },
+  "80": {
+   "quarantined": [],
+   "flags": []
+  },
+  "81": {
+   "quarantined": [
+    "check-in missing or not a time"
+   ],
+   "flags": []
+  },
+  "82": {
+   "quarantined": [],
+   "flags": []
+  },
+  "83": {
+   "quarantined": [],
+   "flags": []
+  },
+  "84": {
+   "quarantined": [],
+   "flags": []
+  },
+  "85": {
+   "quarantined": [],
+   "flags": []
+  },
+  "86": {
+   "quarantined": [],
+   "flags": []
+  },
+  "87": {
+   "quarantined": [],
+   "flags": []
+  },
+  "88": {
+   "quarantined": [],
+   "flags": []
+  },
+  "89": {
+   "quarantined": [],
+   "flags": []
+  },
+  "90": {
+   "quarantined": [],
+   "flags": []
+  },
+  "91": {
+   "quarantined": [],
+   "flags": []
+  },
+  "92": {
+   "quarantined": [],
+   "flags": []
+  },
+  "93": {
+   "quarantined": [],
+   "flags": []
+  },
+  "94": {
+   "quarantined": [],
+   "flags": []
+  },
+  "95": {
+   "quarantined": [],
+   "flags": []
+  },
+  "96": {
+   "quarantined": [],
+   "flags": []
+  },
+  "97": {
+   "quarantined": [],
+   "flags": []
+  },
+  "98": {
+   "quarantined": [],
+   "flags": []
+  },
+  "99": {
+   "quarantined": [],
+   "flags": []
+  },
+  "100": {
+   "quarantined": [],
+   "flags": []
+  },
+  "101": {
+   "quarantined": [],
+   "flags": []
+  },
+  "102": {
+   "quarantined": [],
+   "flags": []
+  },
+  "103": {
+   "quarantined": [],
+   "flags": []
+  },
+  "104": {
+   "quarantined": [],
+   "flags": []
+  },
+  "105": {
+   "quarantined": [],
+   "flags": []
+  },
+  "106": {
+   "quarantined": [],
+   "flags": []
+  },
+  "107": {
+   "quarantined": [],
+   "flags": []
+  },
+  "108": {
+   "quarantined": [],
+   "flags": []
+  },
+  "109": {
+   "quarantined": [],
+   "flags": []
+  },
+  "110": {
+   "quarantined": [],
+   "flags": []
+  },
+  "111": {
+   "quarantined": [],
+   "flags": []
+  },
+  "112": {
+   "quarantined": [],
+   "flags": []
+  },
+  "113": {
+   "quarantined": [],
+   "flags": []
+  },
+  "114": {
+   "quarantined": [],
+   "flags": []
+  },
+  "115": {
+   "quarantined": [],
+   "flags": []
+  },
+  "116": {
+   "quarantined": [],
+   "flags": []
+  },
+  "117": {
+   "quarantined": [],
+   "flags": []
+  },
+  "118": {
+   "quarantined": [],
+   "flags": []
+  },
+  "119": {
+   "quarantined": [],
+   "flags": []
+  },
+  "120": {
+   "quarantined": [],
+   "flags": []
+  },
+  "121": {
+   "quarantined": [],
+   "flags": []
+  },
+  "122": {
+   "quarantined": [],
+   "flags": []
+  },
+  "123": {
+   "quarantined": [],
+   "flags": []
+  },
+  "124": {
+   "quarantined": [],
+   "flags": []
+  },
+  "125": {
+   "quarantined": [],
+   "flags": []
+  },
+  "126": {
+   "quarantined": [],
+   "flags": []
+  },
+  "127": {
+   "quarantined": [],
+   "flags": []
+  },
+  "128": {
+   "quarantined": [],
+   "flags": []
+  },
+  "129": {
+   "quarantined": [],
+   "flags": []
+  },
+  "130": {
+   "quarantined": [],
+   "flags": []
+  },
+  "131": {
+   "quarantined": [],
+   "flags": []
+  },
+  "132": {
+   "quarantined": [],
+   "flags": []
+  },
+  "133": {
+   "quarantined": [],
+   "flags": []
+  },
+  "134": {
+   "quarantined": [],
+   "flags": []
+  },
+  "135": {
+   "quarantined": [],
+   "flags": []
+  },
+  "136": {
+   "quarantined": [],
+   "flags": []
+  },
+  "137": {
+   "quarantined": [],
+   "flags": []
+  },
+  "138": {
+   "quarantined": [],
+   "flags": []
+  },
+  "139": {
+   "quarantined": [],
+   "flags": []
+  },
+  "140": {
+   "quarantined": [],
+   "flags": []
+  },
+  "141": {
+   "quarantined": [],
+   "flags": []
+  },
+  "142": {
+   "quarantined": [],
+   "flags": []
+  },
+  "143": {
+   "quarantined": [],
+   "flags": []
+  },
+  "144": {
+   "quarantined": [],
+   "flags": []
+  },
+  "145": {
+   "quarantined": [],
+   "flags": []
+  },
+  "146": {
+   "quarantined": [
+    "exact copy of an earlier line"
+   ],
+   "flags": []
+  },
+  "147": {
+   "quarantined": [],
+   "flags": []
+  },
+  "148": {
+   "quarantined": [],
+   "flags": []
+  },
+  "149": {
+   "quarantined": [],
+   "flags": []
+  },
+  "150": {
+   "quarantined": [],
+   "flags": []
+  },
+  "151": {
+   "quarantined": [],
+   "flags": []
+  },
+  "152": {
+   "quarantined": [],
+   "flags": []
+  },
+  "153": {
+   "quarantined": [],
+   "flags": []
+  },
+  "154": {
+   "quarantined": [],
+   "flags": []
+  },
+  "155": {
+   "quarantined": [],
+   "flags": []
+  },
+  "156": {
+   "quarantined": [],
+   "flags": []
+  },
+  "157": {
+   "quarantined": [],
+   "flags": []
+  },
+  "158": {
+   "quarantined": [],
+   "flags": []
+  },
+  "159": {
+   "quarantined": [],
+   "flags": [
+    "under three quarters of the planned time"
+   ]
+  },
+  "160": {
+   "quarantined": [],
+   "flags": []
+  },
+  "161": {
+   "quarantined": [],
+   "flags": []
+  },
+  "162": {
+   "quarantined": [],
+   "flags": []
+  },
+  "163": {
+   "quarantined": [],
+   "flags": []
+  },
+  "164": {
+   "quarantined": [],
+   "flags": []
+  },
+  "165": {
+   "quarantined": [],
+   "flags": []
+  },
+  "166": {
+   "quarantined": [],
+   "flags": []
+  },
+  "167": {
+   "quarantined": [],
+   "flags": []
+  },
+  "168": {
+   "quarantined": [],
+   "flags": []
+  },
+  "169": {
+   "quarantined": [],
+   "flags": []
+  },
+  "170": {
+   "quarantined": [],
+   "flags": []
+  },
+  "171": {
+   "quarantined": [],
+   "flags": []
+  },
+  "172": {
+   "quarantined": [],
+   "flags": []
+  },
+  "173": {
+   "quarantined": [],
+   "flags": []
+  },
+  "174": {
+   "quarantined": [],
+   "flags": []
+  },
+  "175": {
+   "quarantined": [],
+   "flags": []
+  },
+  "176": {
+   "quarantined": [],
+   "flags": []
+  },
+  "177": {
+   "quarantined": [],
+   "flags": []
+  },
+  "178": {
+   "quarantined": [],
+   "flags": []
+  },
+  "179": {
+   "quarantined": [
+    "date does not match the visit"
+   ],
+   "flags": []
+  },
+  "180": {
+   "quarantined": [],
+   "flags": []
+  },
+  "181": {
+   "quarantined": [],
+   "flags": []
+  },
+  "182": {
+   "quarantined": [],
+   "flags": []
+  },
+  "183": {
+   "quarantined": [],
+   "flags": []
+  },
+  "184": {
+   "quarantined": [],
+   "flags": []
+  },
+  "185": {
+   "quarantined": [],
+   "flags": []
+  },
+  "186": {
+   "quarantined": [],
+   "flags": []
+  },
+  "187": {
+   "quarantined": [],
+   "flags": []
+  },
+  "188": {
+   "quarantined": [],
+   "flags": []
+  },
+  "189": {
+   "quarantined": [
+    "more than one row for this visit"
+   ],
+   "flags": []
+  },
+  "190": {
+   "quarantined": [
+    "more than one row for this visit"
+   ],
+   "flags": []
+  },
+  "191": {
+   "quarantined": [],
+   "flags": []
+  },
+  "192": {
+   "quarantined": [],
+   "flags": []
+  },
+  "193": {
+   "quarantined": [],
+   "flags": []
+  },
+  "194": {
+   "quarantined": [],
+   "flags": []
+  },
+  "195": {
+   "quarantined": [],
+   "flags": []
+  },
+  "196": {
+   "quarantined": [],
+   "flags": []
+  },
+  "197": {
+   "quarantined": [],
+   "flags": []
+  },
+  "198": {
+   "quarantined": [],
+   "flags": []
+  },
+  "199": {
+   "quarantined": [
+    "unknown client"
+   ],
+   "flags": []
+  },
+  "200": {
+   "quarantined": [],
+   "flags": []
+  },
+  "201": {
+   "quarantined": [],
+   "flags": []
+  },
+  "202": {
+   "quarantined": [
+    "check-out before check-in"
+   ],
+   "flags": []
+  },
+  "203": {
+   "quarantined": [],
+   "flags": []
+  },
+  "204": {
+   "quarantined": [],
+   "flags": []
+  },
+  "205": {
+   "quarantined": [
+    "check-out before check-in"
+   ],
+   "flags": []
+  },
+  "206": {
+   "quarantined": [],
+   "flags": []
+  },
+  "207": {
+   "quarantined": [],
+   "flags": []
+  },
+  "208": {
+   "quarantined": [],
+   "flags": []
+  },
+  "209": {
+   "quarantined": [],
+   "flags": []
+  },
+  "210": {
+   "quarantined": [],
+   "flags": []
+  },
+  "211": {
+   "quarantined": [],
+   "flags": []
+  },
+  "212": {
+   "quarantined": [],
+   "flags": []
+  },
+  "213": {
+   "quarantined": [],
+   "flags": []
+  },
+  "214": {
+   "quarantined": [],
+   "flags": []
+  },
+  "215": {
+   "quarantined": [],
+   "flags": []
+  },
+  "216": {
+   "quarantined": [],
+   "flags": []
+  },
+  "217": {
+   "quarantined": [],
+   "flags": []
+  },
+  "218": {
+   "quarantined": [],
+   "flags": []
+  },
+  "219": {
+   "quarantined": [],
+   "flags": []
+  },
+  "220": {
+   "quarantined": [],
+   "flags": []
+  },
+  "221": {
+   "quarantined": [],
+   "flags": []
+  },
+  "222": {
+   "quarantined": [],
+   "flags": []
+  },
+  "223": {
+   "quarantined": [
+    "overlaps another visit by the same carer"
+   ],
+   "flags": []
+  },
+  "224": {
+   "quarantined": [
+    "overlaps another visit by the same carer"
+   ],
+   "flags": []
+  },
+  "225": {
+   "quarantined": [],
+   "flags": []
+  },
+  "226": {
+   "quarantined": [],
+   "flags": []
+  },
+  "227": {
+   "quarantined": [],
+   "flags": []
+  },
+  "228": {
+   "quarantined": [],
+   "flags": [
+    "under three quarters of the planned time"
+   ]
+  },
+  "229": {
+   "quarantined": [],
+   "flags": []
+  },
+  "230": {
+   "quarantined": [],
+   "flags": []
+  },
+  "231": {
+   "quarantined": [],
+   "flags": []
+  },
+  "232": {
+   "quarantined": [],
+   "flags": []
+  },
+  "233": {
+   "quarantined": [],
+   "flags": [
+    "no note logged"
+   ]
+  },
+  "234": {
+   "quarantined": [],
+   "flags": []
+  },
+  "235": {
+   "quarantined": [],
+   "flags": []
+  },
+  "236": {
+   "quarantined": [],
+   "flags": []
+  },
+  "237": {
+   "quarantined": [],
+   "flags": []
+  },
+  "238": {
+   "quarantined": [],
+   "flags": []
+  },
+  "239": {
+   "quarantined": [
+    "unknown visit"
+   ],
+   "flags": []
+  },
+  "240": {
+   "quarantined": [],
+   "flags": []
+  },
+  "241": {
+   "quarantined": [
+    "date does not match the visit"
+   ],
+   "flags": []
+  },
+  "242": {
+   "quarantined": [],
+   "flags": []
+  },
+  "243": {
+   "quarantined": [],
+   "flags": []
+  },
+  "244": {
+   "quarantined": [],
+   "flags": []
+  },
+  "245": {
+   "quarantined": [
+    "check-in missing or not a time"
+   ],
+   "flags": []
+  },
+  "246": {
+   "quarantined": [],
+   "flags": []
+  },
+  "247": {
+   "quarantined": [],
+   "flags": []
+  },
+  "248": {
+   "quarantined": [
+    "more than one row for this visit"
+   ],
+   "flags": []
+  },
+  "249": {
+   "quarantined": [
+    "more than one row for this visit"
+   ],
+   "flags": []
+  },
+  "250": {
+   "quarantined": [],
+   "flags": []
+  },
+  "251": {
+   "quarantined": [],
+   "flags": []
+  },
+  "252": {
+   "quarantined": [],
+   "flags": []
+  },
+  "253": {
+   "quarantined": [],
+   "flags": []
+  },
+  "254": {
+   "quarantined": [],
+   "flags": []
+  },
+  "255": {
+   "quarantined": [],
+   "flags": []
+  },
+  "256": {
+   "quarantined": [],
+   "flags": []
+  },
+  "257": {
+   "quarantined": [],
+   "flags": []
+  },
+  "258": {
+   "quarantined": [],
+   "flags": []
+  },
+  "259": {
+   "quarantined": [],
+   "flags": []
+  },
+  "260": {
+   "quarantined": [],
+   "flags": []
+  },
+  "261": {
+   "quarantined": [],
+   "flags": []
+  },
+  "262": {
+   "quarantined": [],
+   "flags": []
+  },
+  "263": {
+   "quarantined": [],
+   "flags": []
+  },
+  "264": {
+   "quarantined": [],
+   "flags": []
+  },
+  "265": {
+   "quarantined": [],
+   "flags": []
+  },
+  "266": {
+   "quarantined": [],
+   "flags": []
+  },
+  "267": {
+   "quarantined": [],
+   "flags": []
+  },
+  "268": {
+   "quarantined": [],
+   "flags": []
+  },
+  "269": {
+   "quarantined": [],
+   "flags": []
+  },
+  "270": {
+   "quarantined": [],
+   "flags": []
+  },
+  "271": {
+   "quarantined": [],
+   "flags": []
+  },
+  "272": {
+   "quarantined": [],
+   "flags": []
+  },
+  "273": {
+   "quarantined": [],
+   "flags": []
+  },
+  "274": {
+   "quarantined": [],
+   "flags": []
+  },
+  "275": {
+   "quarantined": [],
+   "flags": []
+  },
+  "276": {
+   "quarantined": [],
+   "flags": []
+  },
+  "277": {
+   "quarantined": [],
+   "flags": []
+  },
+  "278": {
+   "quarantined": [],
+   "flags": []
+  },
+  "279": {
+   "quarantined": [],
+   "flags": []
+  },
+  "280": {
+   "quarantined": [],
+   "flags": []
+  },
+  "281": {
+   "quarantined": [],
+   "flags": []
+  },
+  "282": {
+   "quarantined": [],
+   "flags": []
+  },
+  "283": {
+   "quarantined": [],
+   "flags": []
+  },
+  "284": {
+   "quarantined": [],
+   "flags": []
+  },
+  "285": {
+   "quarantined": [],
+   "flags": []
+  },
+  "286": {
+   "quarantined": [],
+   "flags": []
+  },
+  "287": {
+   "quarantined": [],
+   "flags": []
+  },
+  "288": {
+   "quarantined": [],
+   "flags": []
+  },
+  "289": {
+   "quarantined": [],
+   "flags": []
+  },
+  "290": {
+   "quarantined": [],
+   "flags": []
+  },
+  "291": {
+   "quarantined": [],
+   "flags": []
+  },
+  "292": {
+   "quarantined": [],
+   "flags": []
+  },
+  "293": {
+   "quarantined": [],
+   "flags": []
+  },
+  "294": {
+   "quarantined": [],
+   "flags": []
+  },
+  "295": {
+   "quarantined": [],
+   "flags": []
+  },
+  "296": {
+   "quarantined": [],
+   "flags": []
+  },
+  "297": {
+   "quarantined": [],
+   "flags": []
+  },
+  "298": {
+   "quarantined": [],
+   "flags": []
+  },
+  "299": {
+   "quarantined": [],
+   "flags": []
+  },
+  "300": {
+   "quarantined": [],
+   "flags": []
+  },
+  "301": {
+   "quarantined": [],
+   "flags": []
+  },
+  "302": {
+   "quarantined": [],
+   "flags": []
+  },
+  "303": {
+   "quarantined": [],
+   "flags": []
+  },
+  "304": {
+   "quarantined": [],
+   "flags": []
+  },
+  "305": {
+   "quarantined": [],
+   "flags": []
+  },
+  "306": {
+   "quarantined": [],
+   "flags": []
+  },
+  "307": {
+   "quarantined": [],
+   "flags": []
+  },
+  "308": {
+   "quarantined": [],
+   "flags": []
+  },
+  "309": {
+   "quarantined": [],
+   "flags": []
+  },
+  "310": {
+   "quarantined": [],
+   "flags": []
+  },
+  "311": {
+   "quarantined": [],
+   "flags": []
+  },
+  "312": {
+   "quarantined": [],
+   "flags": []
+  },
+  "313": {
+   "quarantined": [],
+   "flags": []
+  },
+  "314": {
+   "quarantined": [],
+   "flags": []
+  },
+  "315": {
+   "quarantined": [],
+   "flags": []
+  },
+  "316": {
+   "quarantined": [],
+   "flags": []
+  },
+  "317": {
+   "quarantined": [],
+   "flags": []
+  },
+  "318": {
+   "quarantined": [],
+   "flags": []
+  },
+  "319": {
+   "quarantined": [],
+   "flags": []
+  },
+  "320": {
+   "quarantined": [],
+   "flags": []
+  },
+  "321": {
+   "quarantined": [],
+   "flags": []
+  },
+  "322": {
+   "quarantined": [],
+   "flags": []
+  },
+  "323": {
+   "quarantined": [],
+   "flags": []
+  },
+  "324": {
+   "quarantined": [],
+   "flags": []
+  },
+  "325": {
+   "quarantined": [],
+   "flags": []
+  },
+  "326": {
+   "quarantined": [],
+   "flags": []
+  },
+  "327": {
+   "quarantined": [],
+   "flags": []
+  },
+  "328": {
+   "quarantined": [],
+   "flags": []
+  },
+  "329": {
+   "quarantined": [],
+   "flags": []
+  },
+  "330": {
+   "quarantined": [],
+   "flags": []
+  },
+  "331": {
+   "quarantined": [],
+   "flags": []
+  },
+  "332": {
+   "quarantined": [],
+   "flags": []
+  },
+  "333": {
+   "quarantined": [],
+   "flags": []
+  },
+  "334": {
+   "quarantined": [],
+   "flags": []
+  },
+  "335": {
+   "quarantined": [],
+   "flags": []
+  },
+  "336": {
+   "quarantined": [],
+   "flags": []
+  },
+  "337": {
+   "quarantined": [],
+   "flags": []
+  },
+  "338": {
+   "quarantined": [],
+   "flags": []
+  },
+  "339": {
+   "quarantined": [],
+   "flags": []
+  },
+  "340": {
+   "quarantined": [],
+   "flags": []
+  },
+  "341": {
+   "quarantined": [],
+   "flags": []
+  },
+  "342": {
+   "quarantined": [],
+   "flags": []
+  },
+  "343": {
+   "quarantined": [],
+   "flags": []
+  },
+  "344": {
+   "quarantined": [],
+   "flags": []
+  },
+  "345": {
+   "quarantined": [],
+   "flags": []
+  },
+  "346": {
+   "quarantined": [],
+   "flags": []
+  },
+  "347": {
+   "quarantined": [],
+   "flags": []
+  },
+  "348": {
+   "quarantined": [],
+   "flags": []
+  },
+  "349": {
+   "quarantined": [],
+   "flags": []
+  },
+  "350": {
+   "quarantined": [],
+   "flags": [
+    "note logged over 24 hours after the visit"
+   ]
+  },
+  "351": {
+   "quarantined": [],
+   "flags": []
+  },
+  "352": {
+   "quarantined": [],
+   "flags": []
+  },
+  "353": {
+   "quarantined": [],
+   "flags": []
+  },
+  "354": {
+   "quarantined": [],
+   "flags": []
+  },
+  "355": {
+   "quarantined": [],
+   "flags": []
+  },
+  "356": {
+   "quarantined": [
+    "unknown carer"
+   ],
+   "flags": []
+  },
+  "357": {
+   "quarantined": [],
+   "flags": []
+  },
+  "358": {
+   "quarantined": [],
+   "flags": []
+  },
+  "359": {
+   "quarantined": [],
+   "flags": []
+  },
+  "361": {
+   "quarantined": [],
+   "flags": []
+  },
+  "362": {
+   "quarantined": [],
+   "flags": []
+  },
+  "363": {
+   "quarantined": [
+    "missing check-out"
+   ],
+   "flags": []
+  },
+  "364": {
+   "quarantined": [],
+   "flags": []
+  },
+  "365": {
+   "quarantined": [],
+   "flags": []
+  },
+  "366": {
+   "quarantined": [],
+   "flags": []
+  },
+  "367": {
+   "quarantined": [],
+   "flags": []
+  },
+  "368": {
+   "quarantined": [],
+   "flags": []
+  },
+  "369": {
+   "quarantined": [],
+   "flags": []
+  },
+  "370": {
+   "quarantined": [],
+   "flags": []
+  },
+  "371": {
+   "quarantined": [],
+   "flags": []
+  },
+  "372": {
+   "quarantined": [],
+   "flags": []
+  },
+  "373": {
+   "quarantined": [],
+   "flags": []
+  },
+  "374": {
+   "quarantined": [],
+   "flags": []
+  },
+  "375": {
+   "quarantined": [],
+   "flags": []
+  },
+  "376": {
+   "quarantined": [],
+   "flags": []
+  },
+  "377": {
+   "quarantined": [],
+   "flags": []
+  },
+  "378": {
+   "quarantined": [],
+   "flags": []
+  },
+  "379": {
+   "quarantined": [],
+   "flags": []
+  },
+  "380": {
+   "quarantined": [],
+   "flags": []
+  },
+  "381": {
+   "quarantined": [],
+   "flags": []
+  },
+  "382": {
+   "quarantined": [],
+   "flags": []
+  },
+  "383": {
+   "quarantined": [],
+   "flags": []
+  },
+  "384": {
+   "quarantined": [],
+   "flags": []
+  },
+  "385": {
+   "quarantined": [],
+   "flags": []
+  },
+  "386": {
+   "quarantined": [],
+   "flags": []
+  },
+  "387": {
+   "quarantined": [],
+   "flags": []
+  },
+  "388": {
+   "quarantined": [],
+   "flags": []
+  },
+  "389": {
+   "quarantined": [],
+   "flags": []
+  },
+  "390": {
+   "quarantined": [],
+   "flags": []
+  },
+  "391": {
+   "quarantined": [],
+   "flags": []
+  },
+  "392": {
+   "quarantined": [],
+   "flags": []
+  },
+  "393": {
+   "quarantined": [],
+   "flags": []
+  },
+  "394": {
+   "quarantined": [],
+   "flags": []
+  },
+  "395": {
+   "quarantined": [],
+   "flags": []
+  },
+  "396": {
+   "quarantined": [],
+   "flags": []
+  },
+  "397": {
+   "quarantined": [],
+   "flags": []
+  },
+  "398": {
+   "quarantined": [],
+   "flags": []
+  },
+  "399": {
+   "quarantined": [],
+   "flags": []
+  },
+  "400": {
+   "quarantined": [],
+   "flags": []
+  },
+  "401": {
+   "quarantined": [],
+   "flags": []
+  },
+  "402": {
+   "quarantined": [
+    "check-in missing or not a time"
+   ],
+   "flags": []
+  },
+  "403": {
+   "quarantined": [],
+   "flags": []
+  },
+  "404": {
+   "quarantined": [],
+   "flags": []
+  },
+  "405": {
+   "quarantined": [],
+   "flags": []
+  },
+  "406": {
+   "quarantined": [],
+   "flags": []
+  },
+  "407": {
+   "quarantined": [],
+   "flags": []
+  },
+  "408": {
+   "quarantined": [],
+   "flags": []
+  },
+  "409": {
+   "quarantined": [],
+   "flags": []
+  },
+  "410": {
+   "quarantined": [],
+   "flags": []
+  },
+  "411": {
+   "quarantined": [],
+   "flags": []
+  },
+  "412": {
+   "quarantined": [],
+   "flags": []
+  },
+  "413": {
+   "quarantined": [],
+   "flags": []
+  },
+  "414": {
+   "quarantined": [],
+   "flags": []
+  },
+  "415": {
+   "quarantined": [],
+   "flags": []
+  },
+  "416": {
+   "quarantined": [],
+   "flags": []
+  },
+  "417": {
+   "quarantined": [],
+   "flags": []
+  },
+  "418": {
+   "quarantined": [],
+   "flags": []
+  },
+  "419": {
+   "quarantined": [],
+   "flags": []
+  },
+  "420": {
+   "quarantined": [],
+   "flags": []
+  },
+  "421": {
+   "quarantined": [],
+   "flags": []
+  },
+  "422": {
+   "quarantined": [],
+   "flags": []
+  },
+  "423": {
+   "quarantined": [],
+   "flags": []
+  },
+  "424": {
+   "quarantined": [],
+   "flags": []
+  },
+  "425": {
+   "quarantined": [],
+   "flags": []
+  },
+  "426": {
+   "quarantined": [],
+   "flags": []
+  },
+  "427": {
+   "quarantined": [],
+   "flags": []
+  },
+  "428": {
+   "quarantined": [],
+   "flags": []
+  },
+  "429": {
+   "quarantined": [],
+   "flags": []
+  },
+  "430": {
+   "quarantined": [],
+   "flags": []
+  },
+  "431": {
+   "quarantined": [],
+   "flags": []
+  },
+  "432": {
+   "quarantined": [],
+   "flags": []
+  },
+  "433": {
+   "quarantined": [],
+   "flags": []
+  },
+  "434": {
+   "quarantined": [],
+   "flags": []
+  },
+  "435": {
+   "quarantined": [],
+   "flags": []
+  },
+  "436": {
+   "quarantined": [],
+   "flags": []
+  },
+  "437": {
+   "quarantined": [],
+   "flags": []
+  },
+  "438": {
+   "quarantined": [],
+   "flags": []
+  },
+  "439": {
+   "quarantined": [],
+   "flags": []
+  },
+  "440": {
+   "quarantined": [],
+   "flags": []
+  },
+  "441": {
+   "quarantined": [],
+   "flags": []
+  },
+  "442": {
+   "quarantined": [],
+   "flags": []
+  },
+  "443": {
+   "quarantined": [],
+   "flags": []
+  },
+  "444": {
+   "quarantined": [],
+   "flags": []
+  },
+  "445": {
+   "quarantined": [],
+   "flags": []
+  },
+  "446": {
+   "quarantined": [],
+   "flags": []
+  },
+  "447": {
+   "quarantined": [],
+   "flags": []
+  },
+  "448": {
+   "quarantined": [],
+   "flags": []
+  },
+  "449": {
+   "quarantined": [
+    "unknown visit"
+   ],
+   "flags": []
+  },
+  "450": {
+   "quarantined": [],
+   "flags": []
+  },
+  "451": {
+   "quarantined": [],
+   "flags": []
+  },
+  "452": {
+   "quarantined": [],
+   "flags": []
+  },
+  "453": {
+   "quarantined": [],
+   "flags": []
+  },
+  "454": {
+   "quarantined": [],
+   "flags": []
+  },
+  "455": {
+   "quarantined": [],
+   "flags": []
+  },
+  "456": {
+   "quarantined": [],
+   "flags": []
+  },
+  "457": {
+   "quarantined": [],
+   "flags": []
+  },
+  "458": {
+   "quarantined": [],
+   "flags": []
+  },
+  "459": {
+   "quarantined": [],
+   "flags": []
+  },
+  "460": {
+   "quarantined": [],
+   "flags": []
+  },
+  "461": {
+   "quarantined": [],
+   "flags": []
+  },
+  "462": {
+   "quarantined": [],
+   "flags": []
+  },
+  "463": {
+   "quarantined": [],
+   "flags": [
+    "started over 30 minutes late"
+   ]
+  },
+  "464": {
+   "quarantined": [],
+   "flags": []
+  },
+  "465": {
+   "quarantined": [],
+   "flags": []
+  },
+  "466": {
+   "quarantined": [],
+   "flags": []
+  },
+  "467": {
+   "quarantined": [],
+   "flags": []
+  },
+  "468": {
+   "quarantined": [],
+   "flags": []
+  },
+  "469": {
+   "quarantined": [],
+   "flags": []
+  },
+  "470": {
+   "quarantined": [],
+   "flags": []
+  },
+  "471": {
+   "quarantined": [],
+   "flags": []
+  },
+  "472": {
+   "quarantined": [
+    "check-out before check-in"
+   ],
+   "flags": []
+  },
+  "473": {
+   "quarantined": [],
+   "flags": []
+  },
+  "474": {
+   "quarantined": [],
+   "flags": []
+  },
+  "475": {
+   "quarantined": [],
+   "flags": []
+  },
+  "476": {
+   "quarantined": [],
+   "flags": []
+  },
+  "477": {
+   "quarantined": [],
+   "flags": []
+  },
+  "478": {
+   "quarantined": [],
+   "flags": []
+  },
+  "479": {
+   "quarantined": [],
+   "flags": []
+  },
+  "480": {
+   "quarantined": [
+    "wrong number of fields"
+   ],
+   "flags": []
+  },
+  "481": {
+   "quarantined": [],
+   "flags": []
+  },
+  "482": {
+   "quarantined": [],
+   "flags": []
+  },
+  "483": {
+   "quarantined": [],
+   "flags": []
+  },
+  "484": {
+   "quarantined": [],
+   "flags": []
+  },
+  "485": {
+   "quarantined": [],
+   "flags": []
+  },
+  "486": {
+   "quarantined": [],
+   "flags": []
+  },
+  "487": {
+   "quarantined": [],
+   "flags": []
+  },
+  "488": {
+   "quarantined": [],
+   "flags": []
+  },
+  "489": {
+   "quarantined": [],
+   "flags": []
+  },
+  "490": {
+   "quarantined": [],
+   "flags": []
+  },
+  "491": {
+   "quarantined": [],
+   "flags": []
+  },
+  "492": {
+   "quarantined": [],
+   "flags": []
+  },
+  "493": {
+   "quarantined": [],
+   "flags": []
+  },
+  "494": {
+   "quarantined": [],
+   "flags": []
+  },
+  "495": {
+   "quarantined": [],
+   "flags": []
+  },
+  "496": {
+   "quarantined": [],
+   "flags": []
+  },
+  "497": {
+   "quarantined": [
+    "missing check-out"
+   ],
+   "flags": []
+  },
+  "498": {
+   "quarantined": [],
+   "flags": []
+  },
+  "499": {
+   "quarantined": [],
+   "flags": []
+  },
+  "500": {
+   "quarantined": [],
+   "flags": []
+  },
+  "501": {
+   "quarantined": [],
+   "flags": []
+  },
+  "502": {
+   "quarantined": [],
+   "flags": []
+  },
+  "503": {
+   "quarantined": [],
+   "flags": []
+  },
+  "504": {
+   "quarantined": [],
+   "flags": []
+  },
+  "505": {
+   "quarantined": [],
+   "flags": []
+  },
+  "506": {
+   "quarantined": [],
+   "flags": []
+  },
+  "507": {
+   "quarantined": [],
+   "flags": []
+  },
+  "508": {
+   "quarantined": [],
+   "flags": []
+  },
+  "509": {
+   "quarantined": [],
+   "flags": []
+  },
+  "510": {
+   "quarantined": [],
+   "flags": []
+  },
+  "511": {
+   "quarantined": [],
+   "flags": []
+  },
+  "512": {
+   "quarantined": [],
+   "flags": []
+  },
+  "513": {
+   "quarantined": [],
+   "flags": []
+  },
+  "514": {
+   "quarantined": [],
+   "flags": []
+  },
+  "515": {
+   "quarantined": [],
+   "flags": []
+  },
+  "516": {
+   "quarantined": [],
+   "flags": []
+  },
+  "517": {
+   "quarantined": [],
+   "flags": []
+  },
+  "518": {
+   "quarantined": [],
+   "flags": []
+  },
+  "519": {
+   "quarantined": [],
+   "flags": []
+  },
+  "520": {
+   "quarantined": [],
+   "flags": []
+  },
+  "521": {
+   "quarantined": [],
+   "flags": []
+  },
+  "522": {
+   "quarantined": [],
+   "flags": []
+  },
+  "523": {
+   "quarantined": [],
+   "flags": []
+  },
+  "524": {
+   "quarantined": [],
+   "flags": []
+  },
+  "525": {
+   "quarantined": [],
+   "flags": [
+    "started over 30 minutes late"
+   ]
+  },
+  "526": {
+   "quarantined": [],
+   "flags": []
+  },
+  "527": {
+   "quarantined": [],
+   "flags": []
+  },
+  "528": {
+   "quarantined": [],
+   "flags": []
+  },
+  "529": {
+   "quarantined": [],
+   "flags": []
+  },
+  "530": {
+   "quarantined": [],
+   "flags": []
+  },
+  "531": {
+   "quarantined": [],
+   "flags": []
+  },
+  "532": {
+   "quarantined": [],
+   "flags": [
+    "carer differs from the plan"
+   ]
+  },
+  "533": {
+   "quarantined": [],
+   "flags": []
+  },
+  "534": {
+   "quarantined": [
+    "exact copy of an earlier line"
+   ],
+   "flags": []
+  },
+  "535": {
+   "quarantined": [],
+   "flags": []
+  },
+  "536": {
+   "quarantined": [],
+   "flags": []
+  },
+  "537": {
+   "quarantined": [],
+   "flags": []
+  },
+  "538": {
+   "quarantined": [],
+   "flags": []
+  },
+  "539": {
+   "quarantined": [],
+   "flags": [
+    "under three quarters of the planned time"
+   ]
+  },
+  "540": {
+   "quarantined": [],
+   "flags": []
+  },
+  "541": {
+   "quarantined": [],
+   "flags": []
+  },
+  "542": {
+   "quarantined": [],
+   "flags": []
+  },
+  "543": {
+   "quarantined": [],
+   "flags": []
+  },
+  "544": {
+   "quarantined": [],
+   "flags": []
+  },
+  "545": {
+   "quarantined": [],
+   "flags": []
+  },
+  "546": {
+   "quarantined": [],
+   "flags": []
+  },
+  "547": {
+   "quarantined": [],
+   "flags": []
+  },
+  "548": {
+   "quarantined": [],
+   "flags": []
+  },
+  "549": {
+   "quarantined": [],
+   "flags": []
+  },
+  "550": {
+   "quarantined": [],
+   "flags": []
+  },
+  "551": {
+   "quarantined": [],
+   "flags": []
+  },
+  "552": {
+   "quarantined": [],
+   "flags": []
+  },
+  "553": {
+   "quarantined": [],
+   "flags": []
+  },
+  "554": {
+   "quarantined": [],
+   "flags": []
+  },
+  "555": {
+   "quarantined": [],
+   "flags": []
+  },
+  "556": {
+   "quarantined": [],
+   "flags": []
+  },
+  "557": {
+   "quarantined": [],
+   "flags": []
+  },
+  "558": {
+   "quarantined": [],
+   "flags": []
+  },
+  "559": {
+   "quarantined": [],
+   "flags": []
+  },
+  "560": {
+   "quarantined": [],
+   "flags": []
+  },
+  "561": {
+   "quarantined": [],
+   "flags": []
+  },
+  "562": {
+   "quarantined": [],
+   "flags": []
+  },
+  "563": {
+   "quarantined": [],
+   "flags": []
+  },
+  "564": {
+   "quarantined": [],
+   "flags": []
+  },
+  "565": {
+   "quarantined": [],
+   "flags": []
+  },
+  "566": {
+   "quarantined": [
+    "exact copy of an earlier line"
+   ],
+   "flags": []
+  },
+  "567": {
+   "quarantined": [],
+   "flags": []
+  },
+  "568": {
+   "quarantined": [],
+   "flags": []
+  },
+  "569": {
+   "quarantined": [],
+   "flags": []
+  },
+  "570": {
+   "quarantined": [],
+   "flags": []
+  },
+  "571": {
+   "quarantined": [],
+   "flags": []
+  },
+  "572": {
+   "quarantined": [],
+   "flags": []
+  },
+  "573": {
+   "quarantined": [],
+   "flags": []
+  },
+  "574": {
+   "quarantined": [],
+   "flags": []
+  },
+  "575": {
+   "quarantined": [],
+   "flags": []
+  },
+  "576": {
+   "quarantined": [],
+   "flags": []
+  },
+  "577": {
+   "quarantined": [],
+   "flags": []
+  },
+  "578": {
+   "quarantined": [],
+   "flags": []
+  },
+  "579": {
+   "quarantined": [],
+   "flags": []
+  },
+  "580": {
+   "quarantined": [],
+   "flags": []
+  },
+  "581": {
+   "quarantined": [],
+   "flags": []
+  },
+  "582": {
+   "quarantined": [],
+   "flags": []
+  },
+  "583": {
+   "quarantined": [
+    "overlaps another visit by the same carer"
+   ],
+   "flags": []
+  },
+  "584": {
+   "quarantined": [
+    "overlaps another visit by the same carer"
+   ],
+   "flags": []
+  },
+  "585": {
+   "quarantined": [],
+   "flags": []
+  },
+  "586": {
+   "quarantined": [],
+   "flags": []
+  },
+  "587": {
+   "quarantined": [],
+   "flags": []
+  },
+  "588": {
+   "quarantined": [],
+   "flags": []
+  },
+  "589": {
+   "quarantined": [],
+   "flags": []
+  },
+  "590": {
+   "quarantined": [],
+   "flags": []
+  },
+  "591": {
+   "quarantined": [],
+   "flags": []
+  },
+  "592": {
+   "quarantined": [],
+   "flags": []
+  },
+  "593": {
+   "quarantined": [],
+   "flags": []
+  },
+  "594": {
+   "quarantined": [],
+   "flags": []
+  },
+  "595": {
+   "quarantined": [],
+   "flags": []
+  },
+  "596": {
+   "quarantined": [],
+   "flags": []
+  },
+  "597": {
+   "quarantined": [],
+   "flags": []
+  },
+  "598": {
+   "quarantined": [],
+   "flags": []
+  },
+  "599": {
+   "quarantined": [],
+   "flags": []
+  },
+  "600": {
+   "quarantined": [],
+   "flags": []
+  },
+  "601": {
+   "quarantined": [],
+   "flags": []
+  },
+  "602": {
+   "quarantined": [],
+   "flags": []
+  },
+  "603": {
+   "quarantined": [],
+   "flags": []
+  },
+  "604": {
+   "quarantined": [
+    "wrong number of fields"
+   ],
+   "flags": []
+  },
+  "605": {
+   "quarantined": [],
+   "flags": []
+  },
+  "606": {
+   "quarantined": [],
+   "flags": []
+  },
+  "607": {
+   "quarantined": [],
+   "flags": []
+  },
+  "608": {
+   "quarantined": [],
+   "flags": []
+  },
+  "609": {
+   "quarantined": [],
+   "flags": []
+  },
+  "610": {
+   "quarantined": [],
+   "flags": []
+  },
+  "611": {
+   "quarantined": [],
+   "flags": []
+  },
+  "612": {
+   "quarantined": [],
+   "flags": []
+  },
+  "613": {
+   "quarantined": [],
+   "flags": []
+  },
+  "614": {
+   "quarantined": [],
+   "flags": []
+  },
+  "615": {
+   "quarantined": [],
+   "flags": []
+  },
+  "616": {
+   "quarantined": [],
+   "flags": []
+  },
+  "617": {
+   "quarantined": [],
+   "flags": [
+    "note logged over 24 hours after the visit"
+   ]
+  },
+  "618": {
+   "quarantined": [],
+   "flags": []
+  },
+  "619": {
+   "quarantined": [],
+   "flags": []
+  },
+  "620": {
+   "quarantined": [],
+   "flags": []
+  },
+  "621": {
+   "quarantined": [],
+   "flags": []
+  },
+  "622": {
+   "quarantined": [],
+   "flags": []
+  },
+  "623": {
+   "quarantined": [],
+   "flags": []
+  },
+  "624": {
+   "quarantined": [],
+   "flags": []
+  },
+  "625": {
+   "quarantined": [],
+   "flags": []
+  },
+  "626": {
+   "quarantined": [],
+   "flags": []
+  },
+  "627": {
+   "quarantined": [],
+   "flags": []
+  },
+  "628": {
+   "quarantined": [],
+   "flags": []
+  },
+  "629": {
+   "quarantined": [],
+   "flags": []
+  },
+  "630": {
+   "quarantined": [],
+   "flags": []
+  },
+  "631": {
+   "quarantined": [],
+   "flags": []
+  },
+  "632": {
+   "quarantined": [],
+   "flags": []
+  },
+  "633": {
+   "quarantined": [],
+   "flags": []
+  },
+  "634": {
+   "quarantined": [],
+   "flags": []
+  },
+  "635": {
+   "quarantined": [],
+   "flags": []
+  },
+  "636": {
+   "quarantined": [],
+   "flags": []
+  },
+  "637": {
+   "quarantined": [
+    "unknown carer"
+   ],
+   "flags": []
+  },
+  "638": {
+   "quarantined": [],
+   "flags": []
+  },
+  "639": {
+   "quarantined": [],
+   "flags": []
+  },
+  "640": {
+   "quarantined": [],
+   "flags": []
+  },
+  "641": {
+   "quarantined": [],
+   "flags": []
+  },
+  "642": {
+   "quarantined": [],
+   "flags": []
+  },
+  "643": {
+   "quarantined": [],
+   "flags": []
+  },
+  "644": {
+   "quarantined": [
+    "wrong number of fields"
+   ],
+   "flags": []
+  },
+  "645": {
+   "quarantined": [],
+   "flags": []
+  },
+  "646": {
+   "quarantined": [],
+   "flags": []
+  },
+  "647": {
+   "quarantined": [],
+   "flags": []
+  },
+  "648": {
+   "quarantined": [],
+   "flags": []
+  },
+  "649": {
+   "quarantined": [],
+   "flags": []
+  },
+  "650": {
+   "quarantined": [],
+   "flags": []
+  },
+  "651": {
+   "quarantined": [],
+   "flags": []
+  },
+  "652": {
+   "quarantined": [],
+   "flags": []
+  },
+  "653": {
+   "quarantined": [],
+   "flags": []
+  },
+  "654": {
+   "quarantined": [],
+   "flags": []
+  },
+  "655": {
+   "quarantined": [],
+   "flags": []
+  },
+  "656": {
+   "quarantined": [],
+   "flags": [
+    "no note logged"
+   ]
+  },
+  "657": {
+   "quarantined": [],
+   "flags": []
+  },
+  "658": {
+   "quarantined": [],
+   "flags": []
+  },
+  "659": {
+   "quarantined": [],
+   "flags": []
+  },
+  "660": {
+   "quarantined": [],
+   "flags": []
+  },
+  "661": {
+   "quarantined": [],
+   "flags": []
+  },
+  "662": {
+   "quarantined": [
+    "date does not match the visit"
+   ],
+   "flags": []
+  },
+  "663": {
+   "quarantined": [],
+   "flags": []
+  },
+  "664": {
+   "quarantined": [],
+   "flags": []
+  },
+  "665": {
+   "quarantined": [],
+   "flags": []
+  },
+  "666": {
+   "quarantined": [],
+   "flags": []
+  },
+  "667": {
+   "quarantined": [],
+   "flags": []
+  },
+  "668": {
+   "quarantined": [],
+   "flags": []
+  },
+  "669": {
+   "quarantined": [],
+   "flags": []
+  },
+  "670": {
+   "quarantined": [],
+   "flags": []
+  },
+  "671": {
+   "quarantined": [],
+   "flags": []
+  },
+  "672": {
+   "quarantined": [],
+   "flags": []
+  },
+  "673": {
+   "quarantined": [],
+   "flags": []
+  },
+  "674": {
+   "quarantined": [],
+   "flags": []
+  },
+  "675": {
+   "quarantined": [],
+   "flags": []
+  },
+  "676": {
+   "quarantined": [],
+   "flags": []
+  },
+  "677": {
+   "quarantined": [],
+   "flags": []
+  },
+  "678": {
+   "quarantined": [],
+   "flags": []
+  },
+  "679": {
+   "quarantined": [],
+   "flags": []
+  },
+  "680": {
+   "quarantined": [],
+   "flags": []
+  },
+  "681": {
+   "quarantined": [],
+   "flags": []
+  },
+  "682": {
+   "quarantined": [],
+   "flags": []
+  },
+  "683": {
+   "quarantined": [],
+   "flags": []
+  },
+  "684": {
+   "quarantined": [],
+   "flags": []
+  },
+  "685": {
+   "quarantined": [],
+   "flags": []
+  },
+  "686": {
+   "quarantined": [],
+   "flags": []
+  },
+  "687": {
+   "quarantined": [],
+   "flags": []
+  },
+  "688": {
+   "quarantined": [],
+   "flags": []
+  },
+  "689": {
+   "quarantined": [],
+   "flags": []
+  },
+  "690": {
+   "quarantined": [],
+   "flags": []
+  },
+  "691": {
+   "quarantined": [
+    "more than one row for this visit"
+   ],
+   "flags": []
+  },
+  "692": {
+   "quarantined": [
+    "more than one row for this visit"
+   ],
+   "flags": []
+  },
+  "693": {
+   "quarantined": [
+    "overlaps another visit by the same carer"
+   ],
+   "flags": []
+  },
+  "694": {
+   "quarantined": [
+    "overlaps another visit by the same carer"
+   ],
+   "flags": []
+  },
+  "695": {
+   "quarantined": [],
+   "flags": []
+  },
+  "696": {
+   "quarantined": [],
+   "flags": []
+  },
+  "697": {
+   "quarantined": [],
+   "flags": []
+  },
+  "698": {
+   "quarantined": [],
+   "flags": []
+  },
+  "699": {
+   "quarantined": [],
+   "flags": []
+  },
+  "700": {
+   "quarantined": [],
+   "flags": []
+  },
+  "701": {
+   "quarantined": [],
+   "flags": []
+  },
+  "702": {
+   "quarantined": [],
+   "flags": []
+  },
+  "703": {
+   "quarantined": [],
+   "flags": []
+  },
+  "704": {
+   "quarantined": [],
+   "flags": []
+  },
+  "705": {
+   "quarantined": [],
+   "flags": []
+  },
+  "706": {
+   "quarantined": [],
+   "flags": []
+  },
+  "707": {
+   "quarantined": [],
+   "flags": []
+  },
+  "708": {
+   "quarantined": [],
+   "flags": []
+  },
+  "709": {
+   "quarantined": [],
+   "flags": []
+  },
+  "710": {
+   "quarantined": [
+    "unknown carer"
+   ],
+   "flags": []
+  },
+  "711": {
+   "quarantined": [],
+   "flags": []
+  },
+  "712": {
+   "quarantined": [],
+   "flags": []
+  },
+  "713": {
+   "quarantined": [],
+   "flags": []
+  },
+  "714": {
+   "quarantined": [],
+   "flags": []
+  },
+  "715": {
+   "quarantined": [],
+   "flags": []
+  },
+  "716": {
+   "quarantined": [],
+   "flags": []
+  },
+  "717": {
+   "quarantined": [],
+   "flags": []
+  },
+  "718": {
+   "quarantined": [],
+   "flags": []
+  },
+  "719": {
+   "quarantined": [],
+   "flags": []
+  },
+  "720": {
+   "quarantined": [],
+   "flags": []
+  },
+  "721": {
+   "quarantined": [],
+   "flags": []
+  },
+  "722": {
+   "quarantined": [],
+   "flags": [
+    "note logged over 24 hours after the visit"
+   ]
+  },
+  "723": {
+   "quarantined": [],
+   "flags": []
+  },
+  "724": {
+   "quarantined": [],
+   "flags": []
+  },
+  "725": {
+   "quarantined": [],
+   "flags": []
+  },
+  "726": {
+   "quarantined": [],
+   "flags": []
+  },
+  "727": {
+   "quarantined": [],
+   "flags": []
+  },
+  "728": {
+   "quarantined": [],
+   "flags": []
+  },
+  "729": {
+   "quarantined": [],
+   "flags": []
+  },
+  "730": {
+   "quarantined": [],
+   "flags": []
+  },
+  "731": {
+   "quarantined": [],
+   "flags": []
+  },
+  "732": {
+   "quarantined": [],
+   "flags": []
+  },
+  "733": {
+   "quarantined": [],
+   "flags": []
+  },
+  "734": {
+   "quarantined": [],
+   "flags": []
+  },
+  "735": {
+   "quarantined": [],
+   "flags": []
+  },
+  "736": {
+   "quarantined": [],
+   "flags": []
+  },
+  "737": {
+   "quarantined": [],
+   "flags": []
+  },
+  "738": {
+   "quarantined": [],
+   "flags": []
+  },
+  "739": {
+   "quarantined": [],
+   "flags": []
+  },
+  "740": {
+   "quarantined": [],
+   "flags": []
+  },
+  "741": {
+   "quarantined": [],
+   "flags": []
+  },
+  "743": {
+   "quarantined": [],
+   "flags": []
+  },
+  "744": {
+   "quarantined": [],
+   "flags": []
+  },
+  "745": {
+   "quarantined": [],
+   "flags": []
+  },
+  "746": {
+   "quarantined": [],
+   "flags": []
+  },
+  "747": {
+   "quarantined": [],
+   "flags": []
+  },
+  "748": {
+   "quarantined": [],
+   "flags": []
+  },
+  "749": {
+   "quarantined": [],
+   "flags": []
+  },
+  "750": {
+   "quarantined": [],
+   "flags": []
+  },
+  "751": {
+   "quarantined": [],
+   "flags": []
+  },
+  "752": {
+   "quarantined": [],
+   "flags": []
+  },
+  "753": {
+   "quarantined": [],
+   "flags": []
+  },
+  "754": {
+   "quarantined": [],
+   "flags": []
+  },
+  "755": {
+   "quarantined": [],
+   "flags": []
+  },
+  "756": {
+   "quarantined": [],
+   "flags": []
+  },
+  "757": {
+   "quarantined": [],
+   "flags": []
+  },
+  "758": {
+   "quarantined": [],
+   "flags": []
+  },
+  "759": {
+   "quarantined": [],
+   "flags": []
+  },
+  "760": {
+   "quarantined": [],
+   "flags": []
+  },
+  "761": {
+   "quarantined": [],
+   "flags": []
+  },
+  "762": {
+   "quarantined": [],
+   "flags": []
+  },
+  "763": {
+   "quarantined": [],
+   "flags": []
+  },
+  "764": {
+   "quarantined": [
+    "unknown visit"
+   ],
+   "flags": []
+  },
+  "765": {
+   "quarantined": [],
+   "flags": []
+  },
+  "766": {
+   "quarantined": [],
+   "flags": []
+  },
+  "767": {
+   "quarantined": [],
+   "flags": []
+  },
+  "768": {
+   "quarantined": [],
+   "flags": []
+  },
+  "769": {
+   "quarantined": [],
+   "flags": []
+  },
+  "770": {
+   "quarantined": [],
+   "flags": []
+  },
+  "771": {
+   "quarantined": [],
+   "flags": []
+  },
+  "772": {
+   "quarantined": [],
+   "flags": []
+  },
+  "773": {
+   "quarantined": [],
+   "flags": []
+  },
+  "774": {
+   "quarantined": [],
+   "flags": []
+  },
+  "775": {
+   "quarantined": [],
+   "flags": []
+  },
+  "776": {
+   "quarantined": [],
+   "flags": []
+  },
+  "777": {
+   "quarantined": [],
+   "flags": []
+  },
+  "778": {
+   "quarantined": [],
+   "flags": []
+  },
+  "779": {
+   "quarantined": [],
+   "flags": []
+  },
+  "780": {
+   "quarantined": [],
+   "flags": []
+  },
+  "781": {
+   "quarantined": [],
+   "flags": []
+  },
+  "782": {
+   "quarantined": [],
+   "flags": []
+  },
+  "783": {
+   "quarantined": [],
+   "flags": []
+  },
+  "784": {
+   "quarantined": [],
+   "flags": []
+  },
+  "785": {
+   "quarantined": [],
+   "flags": []
+  },
+  "786": {
+   "quarantined": [],
+   "flags": []
+  },
+  "787": {
+   "quarantined": [],
+   "flags": []
+  },
+  "788": {
+   "quarantined": [],
+   "flags": []
+  },
+  "789": {
+   "quarantined": [],
+   "flags": []
+  },
+  "790": {
+   "quarantined": [],
+   "flags": []
+  },
+  "791": {
+   "quarantined": [],
+   "flags": []
+  },
+  "792": {
+   "quarantined": [],
+   "flags": []
+  },
+  "793": {
+   "quarantined": [],
+   "flags": []
+  },
+  "794": {
+   "quarantined": [],
+   "flags": []
+  },
+  "795": {
+   "quarantined": [],
+   "flags": []
+  },
+  "796": {
+   "quarantined": [],
+   "flags": []
+  },
+  "797": {
+   "quarantined": [],
+   "flags": []
+  },
+  "798": {
+   "quarantined": [],
+   "flags": [
+    "carer differs from the plan"
+   ]
+  },
+  "799": {
+   "quarantined": [],
+   "flags": []
+  },
+  "800": {
+   "quarantined": [],
+   "flags": []
+  },
+  "801": {
+   "quarantined": [],
+   "flags": []
+  },
+  "802": {
+   "quarantined": [],
+   "flags": []
+  },
+  "803": {
+   "quarantined": [],
+   "flags": []
+  },
+  "804": {
+   "quarantined": [],
+   "flags": []
+  },
+  "805": {
+   "quarantined": [],
+   "flags": []
+  },
+  "806": {
+   "quarantined": [],
+   "flags": [
+    "no note logged"
+   ]
+  },
+  "807": {
+   "quarantined": [],
+   "flags": []
+  },
+  "808": {
+   "quarantined": [],
+   "flags": []
+  },
+  "809": {
+   "quarantined": [],
+   "flags": []
+  },
+  "810": {
+   "quarantined": [],
+   "flags": []
+  },
+  "811": {
+   "quarantined": [],
+   "flags": []
+  },
+  "812": {
+   "quarantined": [],
+   "flags": []
+  },
+  "813": {
+   "quarantined": [],
+   "flags": []
+  },
+  "814": {
+   "quarantined": [],
+   "flags": []
+  },
+  "815": {
+   "quarantined": [],
+   "flags": []
+  },
+  "816": {
+   "quarantined": [],
+   "flags": []
+  },
+  "817": {
+   "quarantined": [],
+   "flags": []
+  },
+  "818": {
+   "quarantined": [],
+   "flags": []
+  },
+  "819": {
+   "quarantined": [],
+   "flags": []
+  },
+  "820": {
+   "quarantined": [],
+   "flags": []
+  },
+  "821": {
+   "quarantined": [],
+   "flags": []
+  },
+  "822": {
+   "quarantined": [],
+   "flags": []
+  },
+  "823": {
+   "quarantined": [],
+   "flags": []
+  },
+  "824": {
+   "quarantined": [],
+   "flags": []
+  },
+  "825": {
+   "quarantined": [],
+   "flags": []
+  },
+  "826": {
+   "quarantined": [],
+   "flags": []
+  },
+  "827": {
+   "quarantined": [],
+   "flags": []
+  },
+  "828": {
+   "quarantined": [],
+   "flags": []
+  },
+  "829": {
+   "quarantined": [],
+   "flags": []
+  },
+  "830": {
+   "quarantined": [],
+   "flags": []
+  },
+  "831": {
+   "quarantined": [],
+   "flags": []
+  },
+  "832": {
+   "quarantined": [],
+   "flags": []
+  },
+  "833": {
+   "quarantined": [],
+   "flags": []
+  },
+  "834": {
+   "quarantined": [],
+   "flags": []
+  },
+  "835": {
+   "quarantined": [],
+   "flags": []
+  },
+  "836": {
+   "quarantined": [
+    "unknown client"
+   ],
+   "flags": []
+  },
+  "837": {
+   "quarantined": [],
+   "flags": []
+  },
+  "838": {
+   "quarantined": [],
+   "flags": []
+  },
+  "839": {
+   "quarantined": [],
+   "flags": []
+  },
+  "840": {
+   "quarantined": [],
+   "flags": []
+  },
+  "841": {
+   "quarantined": [],
+   "flags": []
+  },
+  "842": {
+   "quarantined": [],
+   "flags": []
+  },
+  "843": {
+   "quarantined": [],
+   "flags": []
+  },
+  "844": {
+   "quarantined": [],
+   "flags": []
+  },
+  "845": {
+   "quarantined": [],
+   "flags": []
+  },
+  "846": {
+   "quarantined": [],
+   "flags": []
+  },
+  "847": {
+   "quarantined": [],
+   "flags": []
+  },
+  "848": {
+   "quarantined": [],
+   "flags": []
+  },
+  "849": {
+   "quarantined": [],
+   "flags": []
+  },
+  "850": {
+   "quarantined": [],
+   "flags": []
+  },
+  "851": {
+   "quarantined": [],
+   "flags": []
+  },
+  "852": {
+   "quarantined": [],
+   "flags": []
+  },
+  "853": {
+   "quarantined": [],
+   "flags": []
+  },
+  "854": {
+   "quarantined": [],
+   "flags": []
+  },
+  "855": {
+   "quarantined": [],
+   "flags": []
+  },
+  "856": {
+   "quarantined": [],
+   "flags": []
+  },
+  "857": {
+   "quarantined": [],
+   "flags": []
+  },
+  "858": {
+   "quarantined": [],
+   "flags": []
+  },
+  "859": {
+   "quarantined": [],
+   "flags": []
+  },
+  "860": {
+   "quarantined": [],
+   "flags": []
+  },
+  "861": {
+   "quarantined": [],
+   "flags": []
+  },
+  "862": {
+   "quarantined": [],
+   "flags": []
+  },
+  "863": {
+   "quarantined": [],
+   "flags": [
+    "carer differs from the plan"
+   ]
+  }
+ }
+}

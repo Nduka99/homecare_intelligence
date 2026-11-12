@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- A care record with a tick for a visit written up, on the app's green. Full bleed, with the
+       drawing inside the maskable safe circle, so one drawing serves both icon uses. -->
+  <rect width="512" height="512" fill="#1d7a48"/>
+  <rect x="136" y="112" width="240" height="288" rx="28" fill="#ffffff"/>
+  <path d="M184 168H328M184 212H328" stroke="#c3cbd2" stroke-width="16" stroke-linecap="round"/>
+  <path d="M190 316l42 40 92-92" fill="none" stroke="#1d7a48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

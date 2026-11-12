@@ -1,4 +1,4 @@
-# Runs the same checks as a developer's machine. Render deploys only after this passes.
+# Runs the same checks as a developer's machine.
 name: checks
 
 on:
@@ -13,8 +13,13 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      # Actions pinned by commit, checked 2026-11-04: checkout v7.0.1, setup-uv v10.3.3.
+      # Actions pinned by commit, checked 2026-11-04: checkout v7.0.1, setup-uv v10.3.3;
+      # 2026-11-06: setup-node v7.1.0.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+      - run: npm ci
       - run: uv sync --locked --no-group rank
       - run: uv run python scripts/check.py

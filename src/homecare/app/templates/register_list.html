@@ -1,0 +1,51 @@
+{# The day's register as rows, one link each, in review order. Used on its own page and beside
+   an open note on wide screens; `current` marks the open note. #}
+{% from "marks.html" import tick, icon, band_tag %}
+{% if register.unread %}
+<div class="band-head">
+  <h2 id="band-unread">{{ band_tag("unread", "Not yet read by the model") }}</h2>
+  <span class="count">{{ register.unread | length }}</span>
+</div>
+<p class="lead-in">Notes from the carer app that the model has not read. Nothing has checked them, so they come first. The model runs only on the laptop{% if demo %}, never in this online copy{% endif %}: read each one yourself.</p>
+<ol class="list" aria-labelledby="band-unread">
+  {% for row in register.unread %}
+  <li>
+    <a class="row" href="/notes/{{ row.note }}"{% if row.note == current %} aria-current="page"{% endif %}>
+      <span class="num">{{ row.number }}</span>
+      <span class="row-main">
+        <span class="row-title">{{ row.client }}</span>
+        <span class="row-meta">{{ row.visit }} <span class="figure window">{{ row.window }}</span> · carer {{ row.carer }}</span>
+        <span>{{ "An addition to an earlier note" if row.addition else "A new note" }}</span>
+        <span class="row-tags">{% if row.decided %}<span class="tag done">{{ tick() }}Decided</span>{% else %}<span class="tag">To decide</span>{% endif %}</span>
+      </span>
+      <span class="chevron">{{ icon("chevron") }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ol>
+{% endif %}
+{% for section in register.sections %}
+<div class="band-head">
+  <h2 id="band-{{ loop.index }}">{{ band_tag(section.key, section.title) }}</h2>
+  <span class="count">{{ section.rows | length }}</span>
+</div>
+<ol class="list" aria-labelledby="band-{{ loop.index }}">
+  {% for row in section.rows %}
+  <li>
+    <a class="row" href="/notes/{{ row.note }}"{% if row.note == current %} aria-current="page"{% endif %}>
+      <span class="num">{{ row.number }}</span>
+      <span class="row-main">
+        <span class="row-title">{{ row.client }}</span>
+        <span class="row-meta">{{ row.visit }} <span class="figure window">{{ row.window }}</span> · carer {{ row.carer }}</span>
+        <span>{{ row.categories | join(", ") | capitalize if row.categories else "No finding" }}</span>
+        <span class="row-tags">
+          {% if row.decided %}<span class="tag done">{{ tick() }}Decided</span>{% else %}<span class="tag">To decide</span>{% endif %}
+          {% for flag in row.flags %}<span class="tag {{ 'tamper' if flag == 'possible tampering' else 'visit' }}">{{ flag | capitalize }}</span>{% endfor %}
+        </span>
+      </span>
+      <span class="chevron">{{ icon("chevron") }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ol>
+{% endfor %}

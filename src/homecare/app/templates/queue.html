@@ -1,43 +1,36 @@
 {% extends "base.html" %}
-{% from "marks.html" import tick, days %}
-{% set current = week | selectattr("day", "equalto", day) | first %}
-{% block title %}Review register, {{ current.long }}{% endblock %}
-{% block masthead %}
-<h1>Safeguarding review register</h1>
-<p class="form-line">{{ current.long }} · demo week · synthetic</p>
-{% endblock %}
+{% from "marks.html" import days %}
+{% set current_day = week | selectattr("day", "equalto", day) | first %}
+{% block title %}Review register, {{ current_day.long }}{% endblock %}
+{% block page_class %} wide{% endblock %}
 {% block main %}
-<p class="orient">Notes the model flagged for a person, in the order to review them: act today, act this visit, random checks of notes with no finding, then possible tampering. Open a client to read the note and record a decision on each finding.</p>
-{{ days(week, day, link) }}
-<p class="tally"><span class="figure">{{ register.to_decide }}</span> {{ "note" if register.to_decide == 1 else "notes" }} to decide, <span class="figure biro">{{ register.decided }}</span> decided</p>
-{% if not register.sections %}
-<p class="empty">No note needs review on this day. A random 7% of notes with no finding are checked too, so even a quiet day usually has a few; this one drew none.</p>
-{% endif %}
-{% for section in register.sections %}
-<section class="band" aria-labelledby="band-{{ loop.index }}">
-  <h2 id="band-{{ loop.index }}"><span class="stamp{% if section.key == 'act today' %} today{% endif %}">{{ section.title }}</span> <span class="count">{{ section.rows | length }}</span></h2>
-  <p class="scroll-hint">The table scrolls sideways for its other columns.</p>
-  <div class="table-scroll" role="region" aria-label="{{ section.title }} notes" tabindex="0">
-    <table class="register">
-      <colgroup><col class="c-num"><col class="c-client"><col class="c-visit"><col class="c-carer"><col class="c-concern"><col class="c-why"><col class="c-decision"></colgroup>
-      <thead>
-        <tr><th scope="col">No.</th><th scope="col">Client</th><th scope="col">Visit</th><th scope="col">Carer</th><th scope="col">Concern</th><th scope="col">Flags</th><th scope="col">Decision</th></tr>
-      </thead>
-      <tbody>
-        {% for row in section.rows %}
-        <tr>
-          <td class="num">{{ row.number }}</td>
-          <td class="client"><a href="/notes/{{ row.note }}">{{ row.client }}</a></td>
-          <td>{{ row.visit }} <span class="figure window">{{ row.window }}</span></td>
-          <td>{{ row.carer }}</td>
-          <td>{{ row.categories | join(", ") if row.categories else "None found" }}</td>
-          <td class="reasons">{{ row.flags | join("; ") | capitalize if row.flags else "None" }}</td>
-          <td>{% if row.decided %}<span class="biro">{{ tick() }}Decided</span>{% else %}To decide{% endif %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-{% endfor %}
+<div class="page-head">
+  <h1>Review register</h1>
+  <p class="sub">{{ current_day.long }} · demo week</p>
+  {{ days(week, day, link) }}
+</div>
+{% set first = (register.unread + (register.sections | map(attribute="rows") | sum(start=[]))) | rejectattr("decided") | first %}
+<div class="split queue">
+  <section class="pane-detail" aria-labelledby="day-title">
+    <div class="card">
+      <h2 id="day-title">This day</h2>
+      <p class="tally"><span><strong>{{ register.to_decide }}</strong> {{ "note" if register.to_decide == 1 else "notes" }} to decide</span> <span><strong>{{ register.decided }}</strong> decided</span></p>
+      <p class="lead-in">In the order to review them: notes the model has not read yet, then act today, act this visit, random checks of notes with no finding, and possible tampering.</p>
+      {% if first %}
+      <div class="actions"><a class="button primary" href="/notes/{{ first.note }}">Open the first note to decide</a></div>
+      {% elif register.sections or register.unread %}
+      <p class="last">Every note on this day has a decision.</p>
+      {% endif %}
+    </div>
+    {% if not register.sections and not register.unread %}
+    <p class="card empty">No note needs review on this day. A random 7% of notes with no finding are checked too, so even a quiet day usually has a few; this one drew none.</p>
+    {% endif %}
+  </section>
+  {% if register.sections or register.unread %}
+  <nav class="pane-list" aria-label="The day's register">
+    {% set current = None %}
+    {% include "register_list.html" %}
+  </nav>
+  {% endif %}
+</div>
 {% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Who might benefit from a conversation{% endblock %}
+{% block main %}
+<div class="page-head">
+  <h1>Who might benefit from a conversation</h1>
+  <p class="sub">Care team · the coming month</p>
+</div>
+<p class="lead-in">Each carer's chance of resigning in the coming month, from their contract, time in role and this week's planned rota, with what raises it most. The top tenth are suggested for a supportive conversation about workload.</p>
+<p class="notice"><strong>This list supports a conversation. It never decides anything about a person.</strong> No decision about anyone's work may rest on it alone (UK GDPR Articles 22A to 22D). The model learned from a synthetic workforce built from Skills for Care's 2026 figures, and the rota effects are assumed. It is known to under-estimate the risk for carers under 25 by about 9 points a year: age is not used, because treating staff differently by age risks direct discrimination under the Equality Act 2010.</p>
+<h2 class="section-title">Care team, most likely to resign first</h2>
+<ol class="list">
+  {% for row in team %}
+  <li class="person">
+    <span class="num">{{ loop.index }}</span>
+    <span>
+      <span class="name">{{ row.carer }}</span>
+      <span class="meta">· {{ "Zero-hours" if row.hours == "zero-hours" else row.hours ~ " hours" }}</span>
+      {% if row.suggested %}<span class="tag check">Suggested</span>{% endif %}
+    </span>
+    <span class="chance"><strong><span class="figure">{{ row.in_100 }}</span> in 100</strong><span class="visually-hidden"> chance this month</span></span>
+    {% if row.reasons %}
+    <details class="more">
+      <summary>What raises it most</summary>
+      <ul>{% for reason in row.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    </details>
+    {% else %}
+    <p class="plain">Nothing above average.</p>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>
+{% endblock %}

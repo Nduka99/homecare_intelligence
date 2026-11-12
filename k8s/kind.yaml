@@ -1,0 +1,14 @@
+# The local cluster for the live demo: one control plane and two workers, so a lost
+# worker can be tested. kind v0.33.0's image for Kubernetes 1.37.0, pinned by the digest its
+# release notes give. No port mappings: nothing on the laptop listens for the cluster; the
+# tunnel connects out. kind's own network plugin enforces NetworkPolicy (since kind v0.24.0).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: homecare
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5

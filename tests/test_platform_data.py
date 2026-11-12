@@ -12,6 +12,8 @@ from homecare.app import db, seed
 def tiny_inputs() -> tuple[Any, ...]:
     world = {
         "start": "2026-10-12",
+        "shift": [420, 1320],
+        "travel": {"456": {"123": 300, "456": 0}, "123": {"456": 300, "123": 0}},
         "clients": [
             {"id": "C01", "name": "Mrs A Test", "details": "80, frailty", "group": "general",
              "needs": ["personal care"], "node": "123"},
@@ -34,10 +36,11 @@ def tiny_inputs() -> tuple[Any, ...]:
     ]  # fmt: skip
     run = [{"header": {"model": "m"}}, {"id": "n1", "dropped": 0, "findings": []}]
     tamper = {"sha256": "t", "probabilities": {"n1": 0.9}}
-    return world, rotas, [21], notes, run, tamper
+    retention: dict[str, Any] = {"model": {}, "carers": {}}
+    return world, rotas, [21], notes, run, tamper, retention
 
 
-def test_the_seed_is_stable_and_leaves_out_labels_and_places() -> None:
+def test_the_seed_is_stable_and_leaves_out_labels_and_road_data() -> None:
     first = seed.dumps(seed.build(*tiny_inputs()))
     assert first == seed.dumps(seed.build(*tiny_inputs()))
     built = seed.build(*tiny_inputs())
@@ -45,7 +48,9 @@ def test_the_seed_is_stable_and_leaves_out_labels_and_places() -> None:
     assert [v["id"] for v in built["visits"]] == ["V2"]  # only the demo days
     assert built["visits"][0]["carer"] == "K01"
     assert built["notes"][0]["tamper"] is True
-    for banned in ('"labels"', '"node"', '"home"'):
+    # Five minutes' drive; the carer cannot leave before the shift starts at 07:00.
+    assert (built["visits"][0]["drive"], built["visits"][0]["starts"]) == (5, 425)
+    for banned in ('"labels"', '"travel"', '"links"'):
         assert banned not in first
 
 
@@ -63,7 +68,15 @@ def test_a_changed_seed_stops_the_app(tmp_path: Path) -> None:
 def test_the_committed_seed_matches_its_pin_and_says_synthetic() -> None:
     loaded = seed.load()
     assert loaded["synthetic"] is True
-    assert len(loaded["notes"]) == 910
+    # 910 notes were written for the week; on the last day, 75 visits end within the hour
+    # before the demo's clock (12:30) or later, so their notes are not written up yet.
+    assert len(loaded["notes"]) == 835
+    visits = {visit["id"]: visit for visit in loaded["visits"]}
+    for note in loaded["notes"]:
+        visit = visits[note["visit"]]
+        if note["day"] == loaded["now"]["day"]:
+            ends = visit["starts"] + visit["duration"]
+            assert ends <= loaded["now"]["minute"] - seed.WRITE_UP_LAG
 
 
 def test_the_database_loads_the_seed_once(tmp_path: Path) -> None:
@@ -72,7 +85,7 @@ def test_the_database_loads_the_seed_once(tmp_path: Path) -> None:
     db.prepare(tmp_path / "h.db", built)
     connection = db.connect(tmp_path / "h.db")
     assert connection.execute("SELECT COUNT(*) FROM notes").fetchone()[0] == 1
-    assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
 
 
 def test_notes_cannot_be_edited_or_deleted(tmp_path: Path) -> None:

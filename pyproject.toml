@@ -46,7 +46,7 @@ rank = [
 default-groups = ["dev", "lab", "rank"]
 
 [build-system]
-requires = ["uv_build>=0.11,<0.12"]
+requires = ["uv_build>=0.11,<0.14"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -68,11 +68,20 @@ ignore = ["S311"]
 "tests/**" = ["S101"]
 # Fixed command lists with no shell, run on the developer's own machine.
 "scripts/check.py" = ["S603", "S607"]
+"scripts/stack_check.py" = ["S603", "S607"]
+"scripts/cluster.py" = ["S603", "S607"]
+# The attack tests name the service-account token's path and write to temp paths inside probe
+# pods on purpose: those are the attacks (K5, K6). No password or local temp file is involved.
+"scripts/cluster_check.py" = ["S603", "S607", "S105", "S108"]
 # Opens only the local test server it started (http://127.0.0.1).
 "scripts/ui_check.py" = ["S310"]
 # Talk only to the local llama-server started from a pinned path (http://127.0.0.1).
 "src/homecare/llm.py" = ["S310"]
 "src/homecare/models.py" = ["S310", "S603"]
+# SQL put together only from the fixed fragments in screens.py (VISIBLE, READ, ARRIVAL); every
+# value is still a ? parameter.
+"src/homecare/app/screens.py" = ["S608"]
+"src/homecare/app/main.py" = ["S608"]
 
 [tool.mypy]
 strict = true

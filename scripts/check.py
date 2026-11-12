@@ -9,6 +9,7 @@ exactly the same things. Every step runs, and all failures are listed at the end
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 # Files describing how the work was done may name the AI tools used; no other shipped
@@ -27,12 +28,54 @@ SOURCES = ["src", "tests", "scripts"]
 SERVE_LOCK = Path("requirements/serve.lock")
 EXPORT = ["uv", "export", "--no-default-groups", "--no-emit-project", "--no-header", "--format"]
 EXPORT += ["requirements-txt", "--quiet"]
+# The carer app's TypeScript (`web/`), run through Node so the same command works everywhere.
+TSC = ["node", "node_modules/typescript/bin/tsc"]
+BIOME = ["node", "node_modules/@biomejs/biome/bin/biome"]
+# Each TypeScript project and the file it compiles to. The compiled files are committed, because
+# the serving image has no Node, so they must match a fresh compile exactly.
+WEB = {"web/app": "app.js", "web/sw": "sw.js"}
+STATIC = Path("src/homecare/app/static")
+# Third-party files the app serves, copied unchanged from the npm package package-lock.json pins
+# (the serving image has no Node), so each must match its locked original exactly.
+VENDORED = {
+    "node_modules/leaflet/dist/leaflet.js": "vendor/leaflet/leaflet.js",
+    "node_modules/leaflet/dist/leaflet.css": "vendor/leaflet/leaflet.css",
+    "node_modules/leaflet/LICENSE": "vendor/leaflet/LICENSE.txt",
+}
 STEPS = [
     ("format", [PYTHON, "-m", "ruff", "format", "--check", *SOURCES]),
     ("lint", [PYTHON, "-m", "ruff", "check", *SOURCES]),
     ("types", [PYTHON, "-m", "mypy"]),
     ("tests", [PYTHON, "-m", "pytest"]),
+    ("app format and lint", [*BIOME, "check", "web"]),
 ]
+
+
+def compiled_problems() -> list[str]:
+    """Each TypeScript project type-checks and compiles to exactly its committed file."""
+    problems = []
+    with tempfile.TemporaryDirectory() as folder:
+        for project, name in WEB.items():
+            if subprocess.run([*TSC, "-p", project, "--outDir", folder]).returncode != 0:
+                problems.append(f"{project} does not compile")
+                continue
+            fresh = (Path(folder) / name).read_text(encoding="utf-8")
+            if fresh != (STATIC / name).read_text(encoding="utf-8"):
+                problems.append(
+                    f"{STATIC / name} is out of date: run `{' '.join(TSC)} -p {project}`"
+                )
+    return problems
+
+
+def vendored_problems() -> list[str]:
+    """Each vendored file is its locked npm original, unchanged."""
+    problems = []
+    for original, copy in VENDORED.items():
+        if Path(original).read_text(encoding="utf-8") != (STATIC / copy).read_text(
+            encoding="utf-8"
+        ):
+            problems.append(f"{STATIC / copy} differs from {original}: copy it again")
+    return problems
 
 
 def attribution_problems(texts: dict[str, str]) -> list[str]:
@@ -75,6 +118,14 @@ def main() -> int:
         print(f"== {name}", flush=True)
         if subprocess.run(command).returncode != 0:
             failed.append(name)
+    print("== app types and compiled files", flush=True)
+    for problem in compiled_problems():
+        print(problem)
+        failed.append("app compile")
+    print("== vendored files", flush=True)
+    for problem in vendored_problems():
+        print(problem)
+        failed.append("vendored files")
     print("== serve lock", flush=True)
     exported = subprocess.run(EXPORT, capture_output=True, text=True, check=True).stdout
     if exported != SERVE_LOCK.read_text(encoding="utf-8"):

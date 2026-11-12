@@ -1,0 +1,38 @@
+# The live demo: the app in demo mode and a Cloudflare tunnel, on one private Docker network.
+# Nothing is published on the host; the tunnel connects out to Cloudflare, so no port is opened.
+# The tunnel's config.yml and key file stay outside the repository, in ~/.cloudflared/homecare
+# unless CLOUDFLARED_DIR names another folder. Run: docker compose up -d --build
+services:
+  app:
+    build: .
+    image: homecare:live
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 1
+    networks: [inside]
+
+  tunnel:
+    # cloudflared 2026.10.7, pinned by digest (checked 2026-11-12).
+    image: cloudflare/cloudflared:2026.10.7@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - ${CLOUDFLARED_DIR:-~/.cloudflared/homecare}:/etc/cloudflared:ro
+    networks: [inside, outside]
+    depends_on:
+      app:
+        condition: service_healthy
+
+networks:
+  # The app's only network has no route out. Even if the app were taken over, it could not reach
+  # the internet, the home network or Docker's own API (CVE-2025-9074); only the tunnel can.
+  inside:
+    internal: true
+  outside: {}

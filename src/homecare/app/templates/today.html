@@ -1,27 +1,121 @@
 {% extends "base.html" %}
-{% from "marks.html" import days %}
+{% from "marks.html" import tick, icon, days, route_sketch, carer_app_head, carer_app_script, offline_line %}
+{% block head %}{{ carer_app_head() }}<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">{% endblock %}
+{% block scripts %}{{ carer_app_script() }}{% endblock %}
 {% set current = week | selectattr("day", "equalto", day) | first %}
-{% block title %}Visit sheet, {{ current.long }}{% endblock %}
-{% block masthead %}
-<h1>Visit sheet</h1>
-<p class="form-line">Carer {{ user }} · {{ current.long }} · synthetic</p>
-{% endblock %}
+{% set next_id = sheet.next.id if (is_today and sheet.next) else "" %}
+{% block title %}Your visits, {{ current.long }}{% endblock %}
+{% block page_class %} wide{% endblock %}
 {% block main %}
-<p class="orient">Your planned visits for the day, in route order. You see only your own clients and your own notes.</p>
-{{ days(week, day, link) }}
-{% if visits %}
-<ol class="visits">
-  {% for v in visits %}
-  <li>
-    <span class="when">{{ v.window }}</span>
-    <div>
-      <p class="what"><strong>{{ v.client }}</strong>, {{ v.visit | lower }} visit, <span class="figure">{{ v.duration }}</span> minutes</p>
-      <p class="needs">Needs: {{ v.needs | join(", ") if v.needs else "none recorded" }}.{% if v.note %} <a href="/notes/{{ v.note }}">Your note</a>{% endif %}</p>
-    </div>
-  </li>
-  {% endfor %}
-</ol>
-{% else %}
-<p class="empty">No visits are planned for you on this day. It is one of your two days off, or the rota gave your visits to others.</p>
-{% endif %}
+{{ offline_line() }}
+<div class="page-head">
+  <h1>Your visits</h1>
+  <p class="sub">{{ current.long }}{% if sheet.visits %} · <span class="tally-line">{% if is_today %}Demo clock <span class="figure">{{ now }}</span> · {% endif %}<span class="figure">{{ sheet.written }}</span> of <span class="figure">{{ sheet.visits | length }}</span> visits written up</span>{% endif %}</p>
+</div>
+
+{# What to do now first, then the week, the route and every visit. On a laptop the route sits
+   beside the rest. #}
+<div class="day-layout">
+  <div class="lead">
+    {% if sent %}<p class="sent" role="status">{{ tick() }}Your note was sent.</p>{% endif %}
+    <div class="card waiting" data-waiting data-carer="{{ user }}" hidden></div>
+
+    {% if sheet.visits and is_today %}
+    {% if sheet.to_write %}
+    <section class="card write-up" aria-labelledby="write-title">
+      <h2 id="write-title">To write up</h2>
+      <ul>
+        {% for v in sheet.to_write %}
+        <li>
+          <p>Visit {{ v.number }}, <strong>{{ v.client }}</strong>, {{ v.visit | lower }} visit from <span class="figure">{{ v.arrive }}</span></p>
+          <a class="button primary" href="/visits/{{ v.id }}/note">Write the note</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if sheet.next %}
+    {% set v = sheet.next %}
+    <section class="card next-card" aria-labelledby="next-title">
+      <div class="card-head">
+        <h2 id="next-title">Next: visit {{ v.number }}</h2>
+      </div>
+      <p class="client">{{ v.client }}</p>
+      {% if v.drive %}
+      <p class="leave">Leave by {{ v.leave }}</p>
+      <p class="trip">Arrive <span class="figure">{{ v.arrive }}</span>, a <span class="figure">{{ v.drive }}</span>-minute drive. {{ v.visit }} visit, <span class="figure window">{{ v.window }}</span>, <span class="figure">{{ v.duration }}</span> minutes.</p>
+      {% else %}
+      <p class="leave">Be there by {{ v.arrive }}</p>
+      <p class="trip">The same place as your last visit. {{ v.visit }} visit, <span class="figure window">{{ v.window }}</span>, <span class="figure">{{ v.duration }}</span> minutes.</p>
+      {% endif %}
+      <p class="needs">Needs: {{ v.needs | join(", ") if v.needs else "none recorded" }}.</p>
+      <div class="actions">
+        <a class="button secondary" href="{{ v.directions }}" rel="noopener noreferrer">{{ icon("directions") }}Directions in Google Maps</a>
+      </div>
+      <p class="from">You can write its note once the visit begins, from <span class="figure">{{ v.arrive }}</span>.</p>
+    </section>
+    {% elif not sheet.to_write %}
+    <p class="card empty">Every visit today is done and written up.</p>
+    {% endif %}
+    {% endif %}
+    <div class="week">{{ days(week, day, link) }}</div>
+  </div>
+
+  {% if sketch %}
+  <div class="side">
+    {% set next_number = (sheet.next.number | string) if next_id else "" %}
+    <figure class="card route" data-next="{{ next_number }}">
+      <h2>Your route</h2>
+      {# With signal, the carer app shows OpenStreetMap's map here; without, the sketch. #}
+      <div class="live-map" hidden>
+        <div class="live-map-frame">
+          <div class="live-map-canvas" role="region" aria-label="Map of your route"></div>
+          <p class="map-credit"><a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer">© OpenStreetMap contributors</a> · <a href="https://www.openstreetmap.org/fixthemap" rel="noopener noreferrer">Report a map issue</a></p>
+        </div>
+        <div class="map-tools">
+          <button class="button secondary" type="button" data-map="in">Zoom in</button>
+          <button class="button secondary" type="button" data-map="out">Zoom out</button>
+          <button class="button secondary" type="button" data-map="fit">Whole route</button>
+        </div>
+      </div>
+      <script type="application/json" id="route-data">{{ live | tojson }}</script>
+      {{ route_sketch(sketch, next_number, "Route sketch: from home through visits 1 to " ~ (sheet.visits | length) ~ " in order and back, numbered as in the list of visits.") }}
+      <figcaption>Numbered markers are your visits{% if next_number %}; the outlined one is your next{% endif %}; the hollow square is home. Drive times are free-flow estimates, so allow for traffic. Map data © <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer">OpenStreetMap contributors</a>, <a href="/map-data">map data (ODbL)</a>.</figcaption>
+    </figure>
+  </div>
+  {% endif %}
+
+  <div class="all">
+    {% if sheet.visits %}
+    <h2 class="section-title">All visits, in route order</h2>
+    <ol class="list visits">
+      {% for v in sheet.visits %}
+      <li data-visit="{{ v.id }}"{% if v.id == next_id %} class="is-next"{% endif %}>
+        <span class="sec" aria-hidden="true">{{ v.number }}</span>
+        <div>
+          <p class="what"><span class="visually-hidden">Visit {{ v.number }}: </span><strong>{{ v.client }}</strong>, {{ v.visit | lower }} visit, <span class="figure">{{ v.duration }}</span> minutes{% if v.id == next_id %} <span class="tag check">Next</span>{% endif %}</p>
+          <p class="when">{% if v.drive %}Leave <span class="figure">{{ v.leave }}</span>{% else %}Same place as the last visit{% endif %} · arrive <span class="figure">{{ v.arrive }}</span> · window <span class="figure window">{{ v.window }}</span></p>
+          <p class="needs">Needs: {{ v.needs | join(", ") if v.needs else "none recorded" }}.</p>
+          <p class="note-state">
+            {% if v.written %}
+            <span class="tag done">{{ tick() }}Written up</span>
+            {% for n in v.notes %}<a href="/notes/{{ n.id }}">{{ "Your addition" if n.amends else "Your note" }}</a>{% endfor %}
+            <a href="/visits/{{ v.id }}/note">Add to your note</a>
+            {% elif v.started %}
+            <a href="/visits/{{ v.id }}/note">Write the note</a>
+            {% else %}
+            <span class="meta">Note from <span class="figure">{{ v.arrive }}</span></span>
+            <a href="{{ v.directions }}" rel="noopener noreferrer">Directions</a>
+            {% endif %}
+          </p>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="card empty">No visits are planned for you on this day. It is one of your two days off, or the rota gave your visits to others.</p>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

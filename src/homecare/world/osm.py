@@ -62,9 +62,9 @@ def load(pin_path: Path = PIN) -> Any:
     return ox.load_graphml(path)
 
 
-def edges(graph: Any) -> list[Edge]:
-    """Plain (from, to, seconds) edges for `roads`, over the largest strongly connected part,
-    so every place can reach every other.
+def timed(graph: Any) -> Any:
+    """The largest strongly connected part, so every place can reach every other, with a
+    driving time on every link.
 
     A road keeps its own speed tag. An untagged road takes the mean of the tagged roads of its
     type in this map (OSMnx's default): on the pinned map 82% of links are tagged, and 96% of
@@ -72,8 +72,45 @@ def edges(graph: Any) -> list[Edge]:
     with no tags at all takes 30 mph, the GOV.UK built-up limit."""
     graph = ox.truncate.largest_component(graph, strongly=True)
     graph = ox.add_edge_speeds(graph, fallback=BUILT_UP_KPH)
-    graph = ox.add_edge_travel_times(graph)
+    return ox.add_edge_travel_times(graph)
+
+
+def edges(graph: Any) -> list[Edge]:
+    """Plain (from, to, seconds) edges for `roads`."""
     found = []
-    for start, end, data in graph.edges(data=True):
+    for start, end, data in timed(graph).edges(data=True):
         found.append((str(start), str(end), float(data["travel_time"])))
     return found
+
+
+def road_file(graph: Any, map_sha256: str) -> dict[str, Any]:
+    """The road data the carer's map draws and routes on, from the same links and times as
+    `edges`: each junction's position, and each one-way link's seconds, street name and bends.
+    It is a Derivative Database of OpenStreetMap, so it carries the ODbL notice and is offered
+    for download beside the map's credit."""
+    graph = timed(graph)
+    nodes = {}
+    for node, data in graph.nodes(data=True):
+        nodes[str(node)] = [round(data["y"], 6), round(data["x"], 6)]
+    links = []
+    for start, end, data in graph.edges(data=True):
+        name = data.get("name") or ""
+        if isinstance(name, list):  # a link that joins two named streets
+            name = " / ".join(name)
+        bends = []
+        if "geometry" in data:  # the end points are the junctions themselves
+            bends = [[round(y, 6), round(x, 6)] for x, y in data["geometry"].coords[1:-1]]
+        links.append([str(start), str(end), round(float(data["travel_time"]), 1), name, bends])
+    links.sort()
+    return {
+        "licence": (
+            "Contains OpenStreetMap data © OpenStreetMap contributors, available under the Open "
+            "Database License 1.0 (https://opendatacommons.org/licenses/odbl/1-0/). Derived "
+            "from the pinned extract below: its largest strongly connected part, with free-flow "
+            "driving times from speed tags (an untagged road takes its type's mean)."
+        ),
+        "source": "https://www.openstreetmap.org/copyright",
+        "map_sha256": map_sha256,
+        "nodes": dict(sorted(nodes.items())),
+        "links": links,
+    }

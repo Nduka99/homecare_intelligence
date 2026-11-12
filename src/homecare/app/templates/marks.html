@@ -1,7 +1,31 @@
 {# Marks used on more than one screen. #}
 
-{% macro tick() -%}
-<svg class="tick" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2.5 8.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="square"/></svg>
+{# Icons are authored here, all on one 24 px grid in one 2 px stroke. #}
+{% set ICONS = {
+  "tick": "M5 12.5l4.5 4.5L19 7",
+  "back": "M15 5l-7 7 7 7",
+  "chevron": "M9 5l7 7-7 7",
+  "directions": "M5 19v-6a3 3 0 0 1 3-3h11M15 6l4 4-4 4",
+} %}
+
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="{{ ICONS[name] }}"/></svg>
+{%- endmacro %}
+
+{% macro tick() -%}{{ icon("tick") }}{%- endmacro %}
+
+{# The tag class for each band and register section: the word carries the meaning. #}
+{% set TONES = {
+  "act today": "today",
+  "act this visit": "visit",
+  "random check of a note with no finding": "check",
+  "possible tampering": "tamper",
+  "check": "check",
+  "note": "",
+} %}
+
+{% macro band_tag(band, words=None) -%}
+<span class="tag {{ TONES.get(band, '') }}">{{ (words or band) | capitalize }}</span>
 {%- endmacro %}
 
 {% macro days(week, current, link) -%}
@@ -12,4 +36,42 @@
     {% endfor %}
   </ol>
 </nav>
+{%- endmacro %}
+
+{# The server-drawn route sketch (`maps.sketch`): streets, the route, home as a hollow square and
+   a numbered box per place; the box holding `next_number` is outlined. #}
+{% macro route_sketch(sketch, next_number, title) -%}
+<svg viewBox="{{ sketch.view }}" role="img" aria-label="{{ title }}" preserveAspectRatio="xMidYMid meet">
+  <path class="streets" d="{{ sketch.streets }}"/>
+  <path class="path" d="{{ sketch.route }}"/>
+  <rect class="home" x="{{ sketch.home.corner_x }}" y="{{ sketch.home.corner_y }}" width="{{ sketch.home.size }}" height="{{ sketch.home.size }}" stroke-width="{{ sketch.home.stroke }}"/>
+  {% for stop in sketch.stops %}
+  {% set is_next = next_number and next_number in stop.label.split(", ") %}
+  <rect class="stop{% if is_next %} is-next{% endif %}" x="{{ stop.box.x }}" y="{{ stop.box.y }}" width="{{ stop.box.width }}" height="{{ stop.box.height }}" rx="{{ sketch.home.stroke * 2 }}" stroke-width="{{ sketch.home.stroke }}"/>
+  <text class="stop-label{% if is_next %} is-next{% endif %}" x="{{ stop.text.x }}" y="{{ stop.text.y }}" font-size="{{ sketch.font }}">{{ stop.label }}</text>
+  {% endfor %}
+</svg>
+{%- endmacro %}
+
+{# The coordinator's two pages. Two destinations are a switch, not a navigation bar. #}
+{% macro coordinator_nav(current) -%}
+<nav class="switch" aria-label="Coordinator's pages">
+  <a href="/rota"{% if current == "rota" %} aria-current="page"{% endif %}>Rota</a>
+  <a href="/imports"{% if current == "imports" %} aria-current="page"{% endif %}>Visit import</a>
+</nav>
+{%- endmacro %}
+
+{# The carer app: installable, and its one script. Only carer pages load it. #}
+{% macro carer_app_head() -%}
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+{%- endmacro %}
+
+{% macro carer_app_script() -%}
+<script type="module" src="/static/app.js"></script>
+{%- endmacro %}
+
+{# Shown by the carer app when there is no signal: a calm status, never an error. #}
+{% macro offline_line() -%}
+<p class="status-line" data-offline role="status" hidden></p>
 {%- endmacro %}

@@ -36,6 +36,32 @@ def times_from(source: str, graph: dict[str, list[tuple[str, float]]]) -> dict[s
     return best
 
 
+def path(source: str, target: str, graph: dict[str, list[tuple[str, float]]]) -> list[str]:
+    """The junctions on the quickest route from `source` to `target`, both included: Dijkstra
+    again, keeping each node's predecessor and stopping at the target."""
+    best = {source: 0.0}
+    before: dict[str, str] = {}
+    queue = [(0.0, source)]
+    while queue:
+        so_far, node = heapq.heappop(queue)
+        if node == target:
+            break
+        if so_far > best[node]:
+            continue
+        for following, seconds in graph.get(node, []):
+            through = so_far + seconds
+            if through < best.get(following, float("inf")):
+                best[following] = through
+                before[following] = node
+                heapq.heappush(queue, (through, following))
+    if target not in best:
+        raise ValueError(f"no route from {source} to {target}")
+    found = [target]
+    while found[-1] != source:
+        found.append(before[found[-1]])
+    return found[::-1]
+
+
 def matrix(edges: list[Edge], places: list[str]) -> Matrix:
     """Whole-second driving times between every pair of places. A pair with no route is an
     error: places are chosen from the graph's largest strongly connected part, so it should

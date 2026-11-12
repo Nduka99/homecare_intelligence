@@ -1,0 +1,16 @@
+{
+  "name": "homecare-intelligence-carer-app",
+  "private": true,
+  "description": "The carer app's TypeScript, compiled into src/homecare/app/static by scripts/check.py",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.2",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "leaflet": "1.9.4"
+  }
+}

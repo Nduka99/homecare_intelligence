@@ -1,0 +1,12 @@
+# Everything for the demo lives in one namespace. Pod Security "restricted" is enforced: a pod
+# that runs as root, escalates privileges, keeps capabilities, skips seccomp or uses the host's
+# namespaces, ports or paths is refused (invariant K4).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: homecare
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.37
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: v1.37

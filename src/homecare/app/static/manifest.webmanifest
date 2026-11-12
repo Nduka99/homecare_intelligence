@@ -1,0 +1,15 @@
+{
+  "name": "Care visits (synthetic home-care demo)",
+  "short_name": "Care visits",
+  "description": "A carer's planned visits and notes for the day, on SYNTHETIC data.",
+  "start_url": "/today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f2f4f5",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
