@@ -285,6 +285,48 @@ def control(browser: Browser, url: str) -> set[str]:
 
 
 CONTROL_EXPECTS = {"color-contrast", "html-has-lang", "reflow"}
+# What marks "you are here": the chosen day, the coordinator's current page, the open row.
+CURRENT = ('.days [aria-current="date"]', '.switch [aria-current="page"]', ".row[aria-current]")
+
+
+def forced_colours(browser: Browser, url: str, carer: str, note: int) -> list[dict[str, Any]]:
+    """High-contrast modes (Windows contrast themes) drop backgrounds and shadows, so a current
+    day, page or row marked only by those disappears; each must keep an outline. Each screen
+    must show at least one such mark, so the check cannot pass on a page that has none."""
+    context = browser.new_context(forced_colors="active", viewport={"width": 1280, "height": 900})
+    serve_tiles(context, [])
+    page = context.new_page()
+    page.goto(url + "/signin")
+    page.get_by_label("Carer").select_option(carer)
+    page.get_by_role("button", name="Sign in as this carer").click()
+    found = current_marks(page, "today", f"{url}/today?day={DAY}")
+    page.goto(url + "/signin")
+    page.get_by_role("button", name="Sign in as the safeguarding lead").click()
+    found += current_marks(page, "note", f"{url}/notes/{note}")
+    page.goto(url + "/signin")
+    page.get_by_role("button", name="Sign in as the coordinator").click()
+    found += current_marks(page, "rota-carer", f"{url}/rota?day={DAY}&carer=K08")
+    page.screenshot(path=str(OUT / "rota-carer-forced-colours.png"))
+    context.close()
+    return found
+
+
+def current_marks(page: Page, name: str, address: str) -> list[dict[str, Any]]:
+    page.goto(address)
+    settled(page)
+    styles: list[str] = page.evaluate(
+        "(selectors) => selectors.flatMap(s => [...document.querySelectorAll(s)])"
+        ".map(e => getComputedStyle(e).outlineStyle)",
+        list(CURRENT),
+    )
+    row = {"screen": name, "size": "desktop", "scheme": "forced colours", "impact": "serious"}
+    if not styles:
+        return [{**row, "id": "current-missing", "help": "no current mark found", "nodes": []}]
+    hidden = [style for style in styles if style == "none"]
+    if hidden:
+        text = f"{len(hidden)} of {len(styles)} current marks vanish in high-contrast mode"
+        return [{**row, "id": "current-not-marked", "help": text, "nodes": []}]
+    return []
 
 
 def main_check() -> int:
@@ -351,6 +393,7 @@ def main_check() -> int:
                     check(coordinator, "replan", size, scheme, report)
                     coordinator.goto(url + "/imports")
                     check(coordinator, "imports", size, scheme, report)
+            report += forced_colours(browser, url, carer, first)
             first_views(browser, url)
             caught = control(browser, url)
             browser.close()

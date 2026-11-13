@@ -582,6 +582,10 @@ input[type="radio"]:checked {
 /* Windows High Contrast repaints colours: the radios go back to the system there. */
 @media (forced-colors: active) {
   input[type="radio"] { appearance: auto; }
+  /* Backgrounds and shadows are dropped too: the current day, page and row get an outline. */
+  .days [aria-current="date"],
+  .switch [aria-current="page"],
+  .row[aria-current] { outline: 2px solid CanvasText; outline-offset: -2px; }
 }
 
 .field { display: grid; gap: 0.375rem; margin-top: 1rem; }
