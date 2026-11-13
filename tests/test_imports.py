@@ -1,8 +1,8 @@
 """The visit import: every fault planted in the SYNTHETIC sample export is quarantined with its
-reason and every planted flag is raised, with no clean row touched (the planting's answer file
-is the independent oracle); a file that cannot be used stores nothing; the same file twice adds
-nothing; cells are shown as text and never logged; only the coordinator sees imports. Each test
-was checked by breaking its protection on purpose."""
+reason and every planted flag is raised, with no clean row touched (the expected answers come
+from the planting's answer file, not from the checker); a file that cannot be used stores
+nothing; the same file twice adds nothing; cells are shown as text and never logged; only the
+coordinator sees imports. Each test was checked by breaking its protection on purpose."""
 
 import json
 from pathlib import Path
@@ -33,7 +33,8 @@ def test_every_planted_fault_and_flag_is_found_and_no_clean_row_is_touched() -> 
     assert outcome(result) == answers["lines"]
     assert blank == answers["blank"]
     planted = [line for line, wanted in answers["lines"].items() if any(wanted.values())]
-    assert len(planted) >= 50  # the oracle is not empty: 16 kinds of fault and flag, 3 or more each
+    # The answer file is not empty: 16 kinds of fault and flag, 3 or more each.
+    assert len(planted) >= 50
 
 
 @pytest.mark.parametrize(

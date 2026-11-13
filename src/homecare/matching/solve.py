@@ -14,7 +14,7 @@ Visits no carer may do alone, and visits needing two carers, are uncovered befor
 their reason. This matters because an empty allowed list in `SetAllowedVehiclesForIndex` allows
 every carer; limiting the vehicle variable, as here, forbids everyone instead.
 The 20-minute break rule is not in the model: the checker tests every rota for it.
-`check.py` is the oracle.
+`check.py` checks every rota independently of this model.
 
 The search stops after a fixed number of solutions, so a run repeats exactly. A time limit is only
 a safety net: a day with few possible rotas can run out of new solutions, and guided local search

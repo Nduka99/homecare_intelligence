@@ -501,7 +501,7 @@ def run_rank(model: str, arm: str, names: list[str]) -> None:
             f"  AUROC {found['auroc']:.3f} ({found['low']:.3f}-{found['high']:.3f}), "
             f"shuffled {report['shuffled_auroc']['auroc']:.3f}\n"
             f"  real in top {report['top']}: today {report['real_in_top_today']}, "
-            f"ranked {report['real_in_top_ranked']}, oracle {report['oracle_real_in_top']}"
+            f"ranked {report['real_in_top_ranked']}, perfect order {report['perfect_real_in_top']}"
         )
 
 

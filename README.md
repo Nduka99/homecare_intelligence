@@ -70,7 +70,7 @@ under [Settings](#settings).
 
 ### The live demo
 
-A copy runs at <https://care.ndukanwagbo.com> while the owner's laptop is on. It is the same
+A copy runs at <https://care.ndukanwagbo.com> while the author's laptop is on. It is the same
 container image in demo mode, on a small Kubernetes cluster on the laptop (below), reached through
 a Cloudflare tunnel: the laptop connects out to Cloudflare, so no port is opened and nothing
 listens on the home network. To run your own the simple way, create a tunnel with `cloudflared`,

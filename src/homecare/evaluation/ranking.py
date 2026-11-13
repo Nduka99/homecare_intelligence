@@ -99,7 +99,8 @@ def study(
     ranked = reorder(notes, runs, scores)
     rng = random.Random(SEED)
     shuffled = {note["id"]: rng.random() for note in today}
-    oracle = {note["id"]: float(is_urgent(note)) for note in today}
+    # The best possible order: every real item above every false one.
+    perfect = {note["id"]: float(is_urgent(note)) for note in today}
     return {
         "queue": len(today),
         "false_items": sum(1 for note in today if not is_urgent(note)),
@@ -109,5 +110,5 @@ def study(
         "real_in_top_today": real_in_top(today),
         "real_in_top_ranked": real_in_top(ranked),
         "shuffled_auroc": auroc(today, shuffled),
-        "oracle_real_in_top": real_in_top(reorder(notes, runs, oracle)),
+        "perfect_real_in_top": real_in_top(reorder(notes, runs, perfect)),
     }

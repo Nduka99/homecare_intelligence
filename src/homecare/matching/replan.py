@@ -6,7 +6,7 @@ stays (or from home), free from the later of the drop-out time and that visit's 
 daily limit minus the work already done. The remaining visits, the dropped carer's included, go
 through the day's routing model (`solve.route`). A visit that changes carer from the plan costs
 continuity, so the re-plan changes as little as it can; a dropped carer's visit prefers the
-client's usual carer. `check.check` with the returned `holds` is the oracle.
+client's usual carer. `check.check`, given the returned `holds`, checks the result independently.
 """
 
 from typing import Any

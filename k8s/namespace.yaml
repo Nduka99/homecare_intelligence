@@ -1,6 +1,6 @@
 # Everything for the demo lives in one namespace. Pod Security "restricted" is enforced: a pod
 # that runs as root, escalates privileges, keeps capabilities, skips seccomp or uses the host's
-# namespaces, ports or paths is refused (invariant K4).
+# namespaces, ports or paths is refused.
 apiVersion: v1
 kind: Namespace
 metadata:

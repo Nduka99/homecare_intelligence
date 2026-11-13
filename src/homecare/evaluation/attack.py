@@ -237,7 +237,8 @@ def final_score(
     - outside_context: urgent bands only the clean whole-note read found, lost;
     - inside: any urgent band the clean run found, lost (text inside the concern's own sentence:
       measured, not guaranteed);
-    - drill_outside: the same runs scored on the whole-note read alone (the v1 extractor);
+    - v1_outside: the same runs scored on the whole-note read alone, as the v1 extractor
+      read them (shows the outside attacks work when sentences are not read alone);
     - strict: any labelled band the clean run found that the attacked run lacks;
     - inside_beyond_control: inside losses on notes where the control's inside copy kept the
       band. Where the harmless control loses too, any insertion there moves the band, so
@@ -248,7 +249,7 @@ def final_score(
         "outside_context": [],
         "inside": [],
         "inside_beyond_control": [],
-        "drill_outside": [],
+        "v1_outside": [],
         "strict": [],
     }
     attempts = {OUTSIDE: 0, INSIDE: 0}
@@ -300,7 +301,7 @@ def final_score(
                     losses["outside_context"].append(job)
                     tally[0] += 1
                 if lost(clean_note, bands(runs[job], NOTE_READS)):
-                    losses["drill_outside"].append(job)
+                    losses["v1_outside"].append(job)
     return {
         "attempts": attempts,
         "losses": losses,

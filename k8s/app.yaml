@@ -5,7 +5,7 @@ kind: ServiceAccount
 metadata:
   name: app
   namespace: homecare
-# No API token in the pod: the app never talks to the cluster (invariant K6).
+# No API token in the pod: the app never talks to the cluster.
 automountServiceAccountToken: false
 ---
 apiVersion: apps/v1
@@ -37,7 +37,7 @@ spec:
         runAsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
-      # Move off a lost node after 30 seconds instead of Kubernetes' default 300 (invariant K7).
+      # Move off a lost node after 30 seconds instead of Kubernetes' default 300.
       tolerations:
         - key: node.kubernetes.io/unreachable
           operator: Exists
@@ -80,7 +80,7 @@ spec:
             - name: tmp
               mountPath: /tmp
       volumes:
-        # Writable, with /dev/shm, which every pod gets (invariant K5); in memory, as in compose.
+        # Writable, with /dev/shm, which every pod gets; in memory, as in compose.
         - name: tmp
           emptyDir:
             medium: Memory

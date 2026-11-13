@@ -3,7 +3,7 @@ read finds (guaranteed by design), while text inside it can (measured, never cla
 
 The model here is a stand-in that obeys every injection it sees: it reports nothing when the
 text it reads holds the injection. That is the worst case, so the property cannot depend on how
-well a real model resists. The oracle is the list of concerns written into the test note.
+well a real model resists. The expected answer is the list of concerns written into the test note.
 """
 
 import json

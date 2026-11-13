@@ -21,7 +21,7 @@ EDGES = [
 
 
 def floyd_warshall(edges: list[roads.Edge], places: list[str]) -> dict[str, dict[str, float]]:
-    """The independent oracle: every pair at once, by a different algorithm from Dijkstra."""
+    """Expected distances worked out another way: every pair at once, not by Dijkstra."""
     nodes = sorted({u for u, _, _ in edges} | {v for _, v, _ in edges})
     best = {u: {v: (0.0 if u == v else float("inf")) for v in nodes} for u in nodes}
     for start, end, seconds in edges:

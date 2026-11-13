@@ -69,9 +69,9 @@ def test_the_add_only_check_catches_a_ranker_that_drops_a_note(
     assert ranking.study(notes, runs, scores)["same_items"] is False
 
 
-def test_a_perfect_score_reaches_auroc_one_and_the_oracle_ranks_real_notes_first() -> None:
+def test_a_perfect_score_reaches_auroc_one_and_the_perfect_order_ranks_real_notes_first() -> None:
     notes, runs = world()
     result = ranking.study(notes, runs, {"n1": 0.9, "n2": 0.1, "n3": 0.8})
     assert result["auroc"]["auroc"] == 1.0
-    assert result["oracle_real_in_top"] == 2
+    assert result["perfect_real_in_top"] == 2
     assert result["false_items"] == 1

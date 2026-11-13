@@ -1,5 +1,5 @@
-# Network rules for the demo's namespace (invariants K1 to K3). Everything is refused, in and
-# out, unless a rule below opens it. The app gets no outbound rule at all.
+# Network rules for the demo's namespace, attacked by scripts/cluster_check.py. Everything is
+# refused, in and out, unless a rule below opens it. The app gets no outbound rule at all.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -9,7 +9,7 @@ spec:
   podSelector: {}
   policyTypes: [Ingress, Egress]
 ---
-# K1: only the tunnel's pods reach the app, and only on its port.
+# Only the tunnel's pods reach the app, and only on its port.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -29,7 +29,7 @@ spec:
         - protocol: TCP
           port: 8000
 ---
-# K3: the tunnel reaches the app, the cluster's DNS, and public addresses on 7844, Cloudflare's
+# The tunnel reaches the app, the cluster's DNS, and public addresses on 7844, Cloudflare's
 # one required port (TCP for HTTP/2, UDP for QUIC). Private ranges are excluded, so a taken-over
 # tunnel cannot reach the home network, Docker's engine or the nodes.
 apiVersion: networking.k8s.io/v1

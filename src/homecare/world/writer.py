@@ -2,7 +2,7 @@
 
 A spec names the client, the visit and what happened (one or two scenario templates, or a
 routine visit). Its labels are the templates' categories, so the labels never come from the
-extractor (an independent oracle). The writer model rewrites the spec in a persona's voice, and
+extractor, the system they test. The writer model rewrites the spec in a persona's voice, and
 code then checks the note:
 - every evidence word group of every template survived (`must` in scenarios.json);
 - no category word gives the label away;

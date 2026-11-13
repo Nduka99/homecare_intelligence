@@ -8,7 +8,7 @@ code). The gate on the committed demo week, fixed first:
 - urgent items fall by at least those 57 pairs;
 - every member quote is still found word for word in its note;
 - a decision on a group labels every member.
-A drill with grouping switched off must fail the item-count rule.
+With grouping switched off, the same item-count rule must fail.
 """
 
 import re

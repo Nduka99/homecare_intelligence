@@ -9,14 +9,17 @@
    signal; a note sent without signal waits on the phone, then reaches the server once when the
    carer taps "Send now".
 3. Sign-out: saved pages, drafts and the service worker are deleted, so without signal the visit
-   sheet no longer opens. Drill: sign out with neither the app script nor the Clear-Site-Data
+   sheet no longer opens. Sabotage: sign out with neither the app script nor the Clear-Site-Data
    header, and the same check must find the copy left behind.
 4. Trusted Types: script on a carer page cannot write HTML or run an inline script. Positive
    control: the same calls succeed in a browser told to ignore the CSP.
 5. The live map: tiles come only from OSM with an origin-only Referer and are never stored;
-   without signal the sketch shows. Drills: no per-tile referrer policy; a stored tile.
-6. A signal check leaves no request open past its 5 s limit. Drill: the app without its body
+   without signal the sketch shows. Sabotage: no per-tile referrer policy; a stored tile.
+6. A signal check leaves no request open past its 5 s limit. Sabotage: the app without its body
    read.
+
+A sabotage switches one protection off, and the same check must then fail, so a check that
+cannot fail is caught.
 
 Laptop only (the Chromium build Playwright 1.63 uses): `uv run python scripts/pwa_check.py`.
 Exits 1 if any check fails.
@@ -302,19 +305,19 @@ def main() -> int:
                 ("carer pages break no CSP or Trusted Types rule", seen == [], str(seen))
             )
 
-            # The drill: sign out with no app script and no Clear-Site-Data header.
-            drill, drill_page = signed_in(browser, url, carer)
+            # Sabotage: sign out with no app script and no Clear-Site-Data header.
+            sabotaged, sabotaged_page = signed_in(browser, url, carer)
 
             def without_clearing(route: Route) -> None:
                 response = route.fetch(max_redirects=0)
                 headers = {k: v for k, v in response.headers.items() if k != "clear-site-data"}
                 route.fulfill(response=response, headers=headers)
 
-            drill.route("**/signout", without_clearing)
-            drill_page.evaluate("document.querySelector('form[action=\"/signout\"]').submit()")
-            drill_page.wait_for_url("**/signin")
-            caught = sheet_opens_offline(drill, drill_page, url)
-            results.append(("sign-out drill: leftover found", caught, ""))
+            sabotaged.route("**/signout", without_clearing)
+            sabotaged_page.evaluate("document.querySelector('form[action=\"/signout\"]').submit()")
+            sabotaged_page.wait_for_url("**/signin")
+            caught = sheet_opens_offline(sabotaged, sabotaged_page, url)
+            results.append(("sign-out sabotaged: leftover found", caught, ""))
 
             # 3b. Sign out while the worker is still saving the day. A save that follows the
             # sign-out's redirect asks for the sign-in page with no cookie, which starts a second
@@ -364,7 +367,7 @@ def main() -> int:
             # 5. The live map, with every tile answered here, never by OSM.
             # With signal: tiles from OSM's tile server only, each with the site's origin as its
             # Referer (OSM's policy asks for one) and never a page path. No worker here, so the
-            # drill below can change the app's script on its way to the page.
+            # sabotage below can change the app's script on its way to the page.
             tiles: list[dict[str, str]] = []
             context, page = signed_in(browser, url, carer, warm=False, tiles=tiles,
                                       service_workers="block")  # fmt: skip
@@ -380,26 +383,27 @@ def main() -> int:
                             live and "© OpenStreetMap contributors" in credit, credit))  # fmt: skip
             context.close()
 
-            # The drill: the app without its per-tile referrer policy. The page's own
+            # Sabotage: the app without its per-tile referrer policy. The page's own
             # no-referrer policy then strips the Referer, and the check must see it.
-            drilled: list[dict[str, str]] = []
-            drill, drill_page = signed_in(browser, url, carer, tiles=drilled,
-                                          service_workers="block", warm=False)  # fmt: skip
+            sabotaged_tiles: list[dict[str, str]] = []
+            sabotaged, sabotaged_page = signed_in(
+                browser, url, carer, tiles=sabotaged_tiles, service_workers="block", warm=False
+            )
 
             def without_tile_referrer(route: Route) -> None:
                 script = route.fetch().text()
                 script = script.replace('referrerPolicy: "strict-origin-when-cross-origin"', "")
                 route.fulfill(status=200, content_type="text/javascript", body=script)
 
-            drill.route("**/static/app.js", without_tile_referrer)
-            drilled.clear()
-            drill_page.reload()
-            drill_live = map_is_live(drill_page)
-            leaked = sorted({tile["referer"] for tile in drilled})
-            results.append(("live map drill: a missing Referer is caught",
-                            drill_live and bool(drilled) and leaked != [origin],
+            sabotaged.route("**/static/app.js", without_tile_referrer)
+            sabotaged_tiles.clear()
+            sabotaged_page.reload()
+            sabotaged_live = map_is_live(sabotaged_page)
+            leaked = sorted({tile["referer"] for tile in sabotaged_tiles})
+            results.append(("live map sabotaged: a missing Referer is caught",
+                            sabotaged_live and bool(sabotaged_tiles) and leaked != [origin],
                             f"Referers {leaked}"))  # fmt: skip
-            drill.close()
+            sabotaged.close()
 
             # Without signal: the sketch, and no tile asked for. With the worker in control,
             # no tile is ever stored in Cache Storage.
@@ -422,7 +426,7 @@ def main() -> int:
             context.set_offline(False)
             # The control for "no tile stored": a tile put in Cache Storage is found.
             page.evaluate(
-                "async (url) => (await caches.open('drill')).put(url, new Response('x'))",
+                "async (url) => (await caches.open('control')).put(url, new Response('x'))",
                 TILE_HOST + "1/1/1.png",
             )
             results.append(("live map control: a stored tile is found",
@@ -431,24 +435,24 @@ def main() -> int:
 
             # 6. A signal check leaves no request open. The app asks /healthz whether there is
             # signal; an answer whose body is never read stays open until the check's 5 s limit
-            # aborts it, so every page showed a failed request. The drill serves the
+            # aborts it, so every page showed a failed request. The sabotage serves the
             # app without its body read, with no worker so the route reaches the page.
             context, _ = signed_in(browser, url, carer)
             done, aborted = signal_checks(context, url)
             results.append(("signal check: no request left open", done >= 1 and aborted == [],
                             f"{done} finished, failed {aborted}"))  # fmt: skip
             context.close()
-            drill, _ = signed_in(browser, url, carer, warm=False, service_workers="block")
+            sabotaged, _ = signed_in(browser, url, carer, warm=False, service_workers="block")
 
             def without_body_read(route: Route) -> None:
                 script = route.fetch().text().replace("await answer.text();", "")
                 route.fulfill(status=200, content_type="text/javascript", body=script)
 
-            drill.route("**/static/app.js", without_body_read)
-            done, aborted = signal_checks(drill, url)
-            results.append(("signal check drill: a request left open is caught", aborted != [],
+            sabotaged.route("**/static/app.js", without_body_read)
+            done, aborted = signal_checks(sabotaged, url)
+            results.append(("signal check sabotaged: a request left open is caught", aborted != [],
                             f"{done} finished, failed {aborted}"))  # fmt: skip
-            drill.close()
+            sabotaged.close()
             browser.close()
         server.should_exit = True
     for check, passed, detail in results:

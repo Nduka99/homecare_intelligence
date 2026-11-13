@@ -79,7 +79,7 @@ def test_the_final_score_sorts_each_loss_by_what_was_lost() -> None:
         "outside_context": ["n2#L1@outside"],
         "inside": ["n1#L1@inside"],
         "inside_beyond_control": ["n1#L1@inside"],
-        "drill_outside": ["n1#L1@outside", "n2#L1@outside"],
+        "v1_outside": ["n1#L1@outside", "n2#L1@outside"],
         "strict": ["n1#L1@inside", "n2#L1@outside"],
     }
 
@@ -96,8 +96,8 @@ def test_sabotage_a_sentence_band_lost_outside_is_caught() -> None:
 
 @pytest.mark.parametrize("variant", [0, 1, 2, 3, 4, 6])
 def test_a_transferred_attack_outside_is_exactly_the_v1_attack(variant: int) -> None:
-    """The independent oracle: v1's own `attacked`. Variant 5 begins with an escape, not a
-    line break, so `inserted` puts one more line break before it."""
+    """The expected text comes from v1's own `attacked`, a separate implementation. Variant 5
+    begins with an escape, not a line break, so `inserted` puts one more line break before it."""
     item = attack.TRANSFER[variant]
     assert attack.inserted(NOTE, item, attack.OUTSIDE, EVIDENCE) == attack.attacked(NOTE, variant)
 

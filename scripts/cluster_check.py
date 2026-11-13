@@ -1,25 +1,27 @@
-"""Attack the local cluster's defences. The invariants, named K1 to K7 in `k8s/` too:
+"""Attack the local cluster's defences, one check for each promise the files in k8s/ make:
 
-    K1  only the tunnel's pods reach the app
-    K2  the app cannot connect anywhere
-    K3  the tunnel reaches only the cluster's DNS and Cloudflare's tunnel port, on public addresses
-    K4  nothing privileged runs (Pod Security "restricted")
-    K5  the app's files are read-only, except /tmp and the /dev/shm every pod gets
-    K6  pods cannot use the Kubernetes API
-    K7  a lost worker heals (resilience, not security)
+    ingress     only the tunnel's pods reach the app
+    egress      the app cannot connect anywhere
+    tunnel      the tunnel reaches only the cluster's DNS and Cloudflare's tunnel port, on public
+                addresses
+    privileges  nothing privileged runs (Pod Security "restricted")
+    read-only   the app's files are read-only, except /tmp and the /dev/shm every pod gets
+    API         pods cannot use the Kubernetes API
+    lost node   a lost worker heals (resilience, not security)
 
-    uv run python scripts/cluster_check.py          # K1 to K6
-    uv run python scripts/cluster_check.py --node   # and K7: stops the app's worker for a while
+    uv run python scripts/cluster_check.py          # every check but the lost node
+    uv run python scripts/cluster_check.py --node   # and the lost node: stops the app's worker
 
 Run after `scripts/cluster.py up`. Each attack prints PASS only when it fails. Then the defence is
-removed for a moment (the drill) and the same attack must succeed, so a check that cannot fail is
-caught. The defence is put back from the files in k8s/ and the attack is run again. Expected
-results come from the rules as written in k8s/, never from the cluster. Probe pods use the app's
-image (it has Python) and are deleted at the end.
+switched off for a moment (printed as "sabotaged") and the same attack must succeed, so a check
+that cannot fail is caught. The defence is put back from the files in k8s/ and the attack is run
+again. Expected results come from the rules as written in k8s/, never from the cluster. Probe pods
+use the app's image (it has Python) and are deleted at the end.
 
-Run it before `up --live` where possible. While the tunnel is live, the drills' rule changes make
-the live link fail for a few seconds (12 Nov: 3 of 70 requests timed out during K1; 90 of 90
-were served with no rule changes), and --node takes the app away for about 80 seconds.
+Run it before `up --live` where possible. While the tunnel is live, switching the rules off and on
+makes the live link fail for a few seconds (12 Nov 2026: 3 of 70 requests timed out during the
+ingress check; 90 of 90 were served with no rule changes), and --node takes the app away for
+about 80 seconds.
 """
 
 import json
@@ -53,7 +55,7 @@ except OSError as error:
     print("probe:", type(error).__name__, error.errno)
 """
 HAS_TOKEN = f"import os; print('probe: token' if os.path.exists('{TOKEN_FILE}') else 'probe: none')"
-# A listener on a private address, for the tunnel to try (K3).
+# A listener on a private address, for the tunnel to try.
 LISTEN = (
     "import socket\ns = socket.create_server(('', 7844))\nwhile True:\n    s.accept()[0].close()"
 )
@@ -170,7 +172,7 @@ def restored(name: str, attacks: Callable[[], list[str]]) -> None:
     report(held, f"{name} restored (try {tries}, {began} s after): {again}")
 
 
-def check_k1(app_ip: str, service_ip: str) -> None:
+def check_ingress(app_ip: str, service_ip: str) -> None:
     def attacks() -> list[str]:
         return [
             probe(NS, "probe-inside", (app_ip, "8000")),
@@ -180,35 +182,43 @@ def check_k1(app_ip: str, service_ip: str) -> None:
         ]
 
     allowed = probe(NS, "probe-tunnel", (service_ip, "8000"))
-    report(allowed.startswith("connected"), f"K1 the tunnel's pods reach the app ({allowed})")
+    report(allowed.startswith("connected"), f"ingress: the tunnel's pods reach the app ({allowed})")
     found = attacks()
-    report(all(refused(a) for a in found), f"K1 other pods cannot reach the app {found}")
+    report(all(refused(a) for a in found), f"ingress: other pods cannot reach the app {found}")
     kubectl("-n", NS, "delete", "networkpolicy", "default-deny", "app-from-tunnel")
-    drill = attacks()
-    report(all(a.startswith("connected") for a in drill), f"K1 drill, no policies: {drill}")
-    restored("K1", attacks)
+    sabotaged = attacks()
+    report(
+        all(a.startswith("connected") for a in sabotaged),
+        f"ingress sabotaged, no policies: {sabotaged}",
+    )
+    restored("ingress", attacks)
 
 
-def check_k2(app_pod: str) -> None:
+def check_egress(app_pod: str) -> None:
     def attacks() -> list[str]:
         return [probe(NS, app_pod, target) for target in [INTERNET, ENGINE, LOOKUP]]
 
     found = attacks()
-    report(all(refused(a) for a in found), f"K2 the app cannot call out or look up names {found}")
+    report(
+        all(refused(a) for a in found), f"egress: the app cannot call out or look up names {found}"
+    )
     kubectl("-n", NS, "delete", "networkpolicy", "default-deny")
-    drill = [probe(NS, app_pod, INTERNET), probe(NS, app_pod, LOOKUP)]
-    report(all(a.startswith("connected") for a in drill), f"K2 drill, no default deny: {drill}")
-    restored("K2", attacks)
+    sabotaged = [probe(NS, app_pod, INTERNET), probe(NS, app_pod, LOOKUP)]
+    report(
+        all(a.startswith("connected") for a in sabotaged),
+        f"egress sabotaged, no default deny: {sabotaged}",
+    )
+    restored("egress", attacks)
 
 
-def check_k3(listener_ip: str) -> None:
+def check_tunnel(listener_ip: str) -> None:
     def attacks() -> list[str]:
         return [probe(NS, "probe-tunnel", WEB), probe(NS, "probe-tunnel", (listener_ip, "7844"))]
 
     allowed = probe(NS, "probe-tunnel", CLOUDFLARE)
-    report(allowed.startswith("connected"), f"K3 the tunnel reaches Cloudflare on 7844 ({allowed})")
+    report(allowed.startswith("connected"), f"tunnel: it reaches Cloudflare on 7844 ({allowed})")
     found = attacks()
-    report(all(refused(a) for a in found), f"K3 the tunnel reaches nothing else {found}")
+    report(all(refused(a) for a in found), f"tunnel: it reaches nothing else {found}")
     open_egress = {
         "apiVersion": "networking.k8s.io/v1",
         "kind": "NetworkPolicy",
@@ -221,24 +231,27 @@ def check_k3(listener_ip: str) -> None:
     }
     kubectl("-n", NS, "delete", "networkpolicy", "tunnel-out")
     kubectl("apply", "-f", "-", stdin=json.dumps(open_egress))
-    drill = attacks()
-    report(all(a.startswith("connected") for a in drill), f"K3 drill, open egress: {drill}")
-    restored("K3", attacks)
+    sabotaged = attacks()
+    report(
+        all(a.startswith("connected") for a in sabotaged),
+        f"tunnel sabotaged, open egress: {sabotaged}",
+    )
+    restored("tunnel", attacks)
 
 
 def privileged_pods() -> dict[str, dict[str, Any]]:
     """One pod per forbidden setting, each otherwise allowed, so each refusal has one cause."""
     command = ["python", "-c", "pass"]
-    root = pod("k4-root", NS, {}, command)
+    root = pod("test-root", NS, {}, command)
     root["spec"]["securityContext"].update({"runAsNonRoot": False, "runAsUser": 0})
-    privileged = pod("k4-privileged", NS, {}, command)
+    privileged = pod("test-privileged", NS, {}, command)
     # The API itself refuses privileged with allowPrivilegeEscalation false, so both change.
     privileged["spec"]["containers"][0]["securityContext"].update(
         {"privileged": True, "allowPrivilegeEscalation": True}
     )
-    host_path = pod("k4-host-path", NS, {}, command)
+    host_path = pod("test-host-path", NS, {}, command)
     host_path["spec"]["volumes"] = [{"name": "host", "hostPath": {"path": "/"}}]
-    host_network = pod("k4-host-network", NS, {}, command)
+    host_network = pod("test-host-network", NS, {}, command)
     host_network["spec"]["hostNetwork"] = True
     return {
         "root": root,
@@ -252,31 +265,41 @@ def dry_run(manifest: dict[str, Any]) -> str:
     return kubectl("create", "--dry-run=server", "-f", "-", stdin=json.dumps(manifest))
 
 
-def check_k4() -> None:
-    control = dry_run(pod("k4-allowed", NS, {}, ["python", "-c", "pass"]))
+def check_privileges() -> None:
+    control = dry_run(pod("test-allowed", NS, {}, ["python", "-c", "pass"]))
     report(
-        REFUSED not in control and "created" in control, "K4 control: a restricted pod is allowed"
+        REFUSED not in control and "created" in control,
+        "privileges control: a restricted pod is allowed",
     )
     found = {name: REFUSED in dry_run(m) for name, m in privileged_pods().items()}
-    report(all(found.values()), f"K4 privileged pods are refused {found}")
+    report(all(found.values()), f"privileges: privileged pods are refused {found}")
     label = "pod-security.kubernetes.io/enforce=privileged"
     kubectl("label", "namespace", NS, label, "--overwrite")
-    drill = {name: "created" in dry_run(m) for name, m in privileged_pods().items()}
-    report(all(drill.values()), f"K4 drill, namespace set to privileged, accepted: {drill}")
+    sabotaged = {name: "created" in dry_run(m) for name, m in privileged_pods().items()}
+    report(
+        all(sabotaged.values()),
+        f"privileges sabotaged, namespace set to privileged, accepted: {sabotaged}",
+    )
     kubectl("apply", "-f", str(K8S / "namespace.yaml"))
     again = {name: REFUSED in dry_run(m) for name, m in privileged_pods().items()}
-    report(all(again.values()), f"K4 restored: {again}")
+    report(all(again.values()), f"privileges restored: {again}")
 
 
-def check_k5(app_pod: str) -> None:
-    found = {path: run_in(NS, app_pod, WRITE, path) for path in ["/var/tmp/k5", "/app/k5", "/k5"]}
+def check_read_only(app_pod: str) -> None:
+    found = {
+        path: run_in(NS, app_pod, WRITE, path)
+        for path in ["/var/tmp/probe", "/app/probe", "/probe"]
+    }
     report(
-        all(a == "OSError 30" for a in found.values()), f"K5 the app's disk is read-only {found}"
+        all(a == "OSError 30" for a in found.values()),
+        f"read-only: the app's disk is read-only {found}",
     )
-    allowed = run_in(NS, app_pod, WRITE, "/tmp/k5")
-    report(allowed == "written", f"K5 the app can write its /tmp ({allowed})")
-    control = run_in("default", "probe-outside", WRITE, "/var/tmp/k5")
-    report(control == "written", f"K5 control, no read-only root: /var/tmp written ({control})")
+    allowed = run_in(NS, app_pod, WRITE, "/tmp/probe")
+    report(allowed == "written", f"read-only: the app can write its /tmp ({allowed})")
+    control = run_in("default", "probe-outside", WRITE, "/var/tmp/probe")
+    report(
+        control == "written", f"read-only control, no read-only root: /var/tmp written ({control})"
+    )
 
 
 def can_i(account: str, verb: str, resource: str) -> str:
@@ -284,23 +307,26 @@ def can_i(account: str, verb: str, resource: str) -> str:
     return kubectl("auth", "can-i", verb, resource, "-n", NS, "--as", who).strip()
 
 
-def check_k6(app_pod: str) -> None:
+def check_api(app_pod: str) -> None:
     token = run_in(NS, app_pod, HAS_TOKEN)
     control = run_in("default", "probe-outside", HAS_TOKEN)
-    report(token == "none", f"K6 no API token in the app's pod ({token})")
-    report(control == "token", f"K6 control, the default account's pod has one ({control})")
+    report(token == "none", f"API: no API token in the app's pod ({token})")
+    report(control == "token", f"API control, the default account's pod has one ({control})")
     asks = [
         (a, v, r) for a in ["app", "tunnel"] for v, r in [("get", "secrets"), ("create", "pods")]
     ]
     found = {f"{a} {v} {r}": can_i(a, v, r) for a, v, r in asks}
-    report(all(answer == "no" for answer in found.values()), f"K6 no API permissions {found}")
-    kubectl("-n", NS, "create", "serviceaccount", "k6-drill")
-    kubectl("-n", NS, "create", "role", "k6-drill", "--verb=get", "--resource=secrets")
-    binding = ["--role=k6-drill", f"--serviceaccount={NS}:k6-drill"]
-    kubectl("-n", NS, "create", "rolebinding", "k6-drill", *binding)
-    drill = can_i("k6-drill", "get", "secrets")
-    report(drill == "yes", f"K6 drill, an account with a role can read Secrets ({drill})")
-    kubectl("-n", NS, "delete", "rolebinding,role,serviceaccount", "k6-drill")
+    report(all(answer == "no" for answer in found.values()), f"API: no API permissions {found}")
+    kubectl("-n", NS, "create", "serviceaccount", "test-reader")
+    kubectl("-n", NS, "create", "role", "test-reader", "--verb=get", "--resource=secrets")
+    binding = ["--role=test-reader", f"--serviceaccount={NS}:test-reader"]
+    kubectl("-n", NS, "create", "rolebinding", "test-reader", *binding)
+    sabotaged = can_i("test-reader", "get", "secrets")
+    report(
+        sabotaged == "yes",
+        f"API sabotaged, an account with a role can read Secrets ({sabotaged})",
+    )
+    kubectl("-n", NS, "delete", "rolebinding,role,serviceaccount", "test-reader")
 
 
 def ready_app() -> tuple[str, str]:
@@ -314,7 +340,7 @@ def ready_app() -> tuple[str, str]:
     return "", ""
 
 
-def check_k7() -> None:
+def check_lost_node() -> None:
     _, node = ready_app()
     print(f"     stopping {node}, which runs the app", flush=True)
     subprocess.run(["docker", "stop", node], capture_output=True, check=True)
@@ -327,7 +353,7 @@ def check_k7() -> None:
             break
         time.sleep(2)
     seconds = round(time.monotonic() - start)
-    report(bool(moved), f"K7 the app is ready on another node after {seconds} s ({moved})")
+    report(bool(moved), f"lost node: the app is ready on another node after {seconds} s ({moved})")
     subprocess.run(["docker", "start", node], capture_output=True, check=True)
     kubectl("wait", "--for=condition=Ready", f"node/{node}", "--timeout=180s")
 
@@ -339,14 +365,14 @@ def main() -> int:
         app_ip = jsonpath(NS, "pod", "{.status.podIP}", app_pod)
         service_ip = jsonpath(NS, "service", "{.spec.clusterIP}", "app")
         listener_ip = jsonpath("default", "pod", "{.status.podIP}", "listener")
-        check_k1(app_ip, service_ip)
-        check_k2(app_pod)
-        check_k3(listener_ip)
-        check_k4()
-        check_k5(app_pod)
-        check_k6(app_pod)
+        check_ingress(app_ip, service_ip)
+        check_egress(app_pod)
+        check_tunnel(listener_ip)
+        check_privileges()
+        check_read_only(app_pod)
+        check_api(app_pod)
         if "--node" in sys.argv[1:]:
-            check_k7()
+            check_lost_node()
     finally:
         restore_network()
         kubectl("apply", "-f", str(K8S / "namespace.yaml"))

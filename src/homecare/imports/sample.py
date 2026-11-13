@@ -6,7 +6,7 @@ planned time, and logs the note 1-30 minutes after leaving. So no clean row trip
 
 Then faults are planted, one per changed row, and the answer file records what each line must
 get: its quarantine reasons and its flags. The answers come from the planting, not from the
-checker, so they are an independent oracle for `validate.check`.
+checker, so `validate.check` is tested against answers it had no part in.
 """
 
 import csv

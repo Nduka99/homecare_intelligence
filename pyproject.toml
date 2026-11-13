@@ -71,7 +71,7 @@ ignore = ["S311"]
 "scripts/stack_check.py" = ["S603", "S607"]
 "scripts/cluster.py" = ["S603", "S607"]
 # The attack tests name the service-account token's path and write to temp paths inside probe
-# pods on purpose: those are the attacks (K5, K6). No password or local temp file is involved.
+# pods on purpose: those are the attacks. No password or local temp file is involved.
 "scripts/cluster_check.py" = ["S603", "S607", "S105", "S108"]
 # Opens only the local test server it started (http://127.0.0.1).
 "scripts/ui_check.py" = ["S310"]

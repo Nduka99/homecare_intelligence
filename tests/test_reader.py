@@ -1,6 +1,6 @@
 """The laptop's model reading app notes (`homecare platform read`), with a stand-in model and the
 real v2 extraction: a concern found moves the note from "not yet read" into the register; a
-quote not in the note is dropped (I2); a failed read leaves the note listed as unread. Each test
+quote not in the note is dropped; a failed read leaves the note listed as unread. Each test
 was checked by breaking its protection on purpose."""
 
 import re

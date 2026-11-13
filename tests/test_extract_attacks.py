@@ -46,7 +46,7 @@ ESCAPES = [
 
 @pytest.mark.parametrize("payload", ESCAPES)
 def test_note_text_cannot_leave_its_data_field(payload: str) -> None:
-    """The oracle is the JSON parser: the message must decode to one field holding exactly
+    """The JSON parser decides the result: the message must decode to one field holding exactly
     the note, whatever the note contains."""
     note = NOTE + payload
     message = extract.user_message(note)
