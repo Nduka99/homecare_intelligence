@@ -35,7 +35,7 @@ lab = [
 # weeks old when added (2026-11-06), to lower supply-chain risk. On Windows, PyPI's torch is CPU-only.
 rank = [
     "torch>=2.14.1,<2.15",
-    "transformers>=5.20.2,<5.21",
+    "transformers>=5.20.2,<5.23",
 ]
 
 # `uv sync` installs every group on the laptop. CI skips `rank` (on Linux, torch pulls about 3 GB of
