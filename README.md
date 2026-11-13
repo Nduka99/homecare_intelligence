@@ -6,6 +6,11 @@ homes. It is built and tested on one **synthetic** agency set on a real Birmingh
 **Every client, carer and note here is synthetic.** No real person's data is used, and nothing
 here describes a real organisation.
 
+A companion project, [Care inspection reader](https://reader.ndukanwagbo.com)
+([code](https://github.com/Nduka99/care-inspection-reader)), tests the same note-reading method
+on real writing: public CQC inspection reports of home-care agencies, checked against the
+inspectors' own scores.
+
 ## What it does
 
 1. **Care-notes review (built).** After each visit, a carer writes a short note. A local language
