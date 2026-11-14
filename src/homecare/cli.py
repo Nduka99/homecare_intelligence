@@ -19,6 +19,9 @@
     homecare attack llmail --model M        adapt and register human attacks from LLMail-Inject
     homecare platform seed                  write the platform's SYNTHETIC demo-week seed and pin
     homecare platform user NAME --role R    add or reset a laptop account (password asked)
+    homecare fhir export --client C --out FILE  one client's record as a FHIR R4 Bundle
+    homecare fhir install-validator         download HL7's validator and Java, pinned (Windows)
+    homecare fhir validate FILE...          check files against FHIR R4 and UK Core, offline
     homecare retention run                  simulate the workforce, fit and check the model
 
 Data lives in the git-ignored `data/` folder: `data/eval/<set>/` (registered sets),
@@ -36,7 +39,7 @@ from typing import Any
 
 import uvicorn
 
-from homecare import llm, models, nli, tamper
+from homecare import fhir, fhir_check, llm, models, nli, tamper
 from homecare.app import auditlog, auth, db, importer, maps, reader, screens
 from homecare.app import main as app_main
 from homecare.app import seed as platform_seed
@@ -246,6 +249,44 @@ def run_platform_read() -> None:
         auditlog.record(connection, settings["key"], settings["anchor"], entry)
     connection.close()
     print(f"read {len(done['read'])}; failed {len(done['failed'])} (still listed as unread)")
+
+
+def run_fhir_export(client: str, out: Path) -> None:
+    """Write one client's record from the accounts-mode database as a FHIR R4 Bundle. The export
+    is audited first, by client, resource count and the file's SHA-256 (never its text), so no
+    exported file can exist without its audit entry."""
+    settings = app_main.settings_from_env()
+    if settings["mode"] != "accounts":
+        raise SystemExit("set SIGN_IN=accounts: a demo's records live only in its running process")
+    seed = platform_seed.load()
+    db.prepare(settings["database"], seed)
+    connection = db.connect(settings["database"])
+    try:
+        found = fhir.bundle(connection, seed, client)
+        text = fhir.dumps(found)
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        entry = {"at": time.time(), "event": "fhir export", "user": "command line",
+                 "client": client, "resources": len(found["entry"]), "sha256": digest}  # fmt: skip
+        auditlog.record(connection, settings["key"], settings["anchor"], entry)
+    except ValueError as missing:
+        raise SystemExit(str(missing)) from missing
+    finally:
+        connection.close()
+    out.write_text(text, encoding="utf-8", newline="\n")
+    print(f"{out}: {len(found['entry'])} resources for {client}, SHA-256 {digest}")
+
+
+def run_fhir_validate(files: list[Path]) -> None:
+    """Every issue HL7's validator raises, then a count by severity; fails on any error."""
+    found = fhir_check.validate(files)
+    for issue in found:
+        print(f"{issue['file']}: {issue['severity']}: {issue['where']}: {issue['message']}")
+    counts = {level: 0 for level in ("fatal", "error", "warning", "information")}
+    for issue in found:
+        counts[issue["severity"]] = counts.get(issue["severity"], 0) + 1
+    print(", ".join(f"{count} {level}" for level, count in counts.items()))
+    if counts["fatal"] or counts["error"]:
+        raise SystemExit(1)
 
 
 def run_platform_seed() -> None:
@@ -994,6 +1035,20 @@ def main(argv: list[str] | None = None) -> None:
         "--role", required=True, choices=["lead", "carer", "coordinator", "manager"]
     )
     user_command.add_argument("--carer", help="the carer ID, for a carer account")
+    fhir_command = commands.add_parser("fhir", help="export a client's record as FHIR R4")
+    fhir_actions = fhir_command.add_subparsers(dest="action", required=True)
+    export_command = fhir_actions.add_parser(
+        "export", help="one client's record as a FHIR R4 Bundle (accounts mode)"
+    )
+    fhir_actions.add_parser(
+        "install-validator", help="download HL7's validator and a Java runtime, pinned (Windows)"
+    )
+    fhir_actions.add_parser(
+        "validate", help="check FHIR JSON files against FHIR R4 and UK Core, offline"
+    ).add_argument("files", nargs="+", type=Path)
+    export_command.add_argument("--client", required=True, help="the client ID, such as C45")
+    # A file, not standard output: PowerShell's `>` would re-encode the JSON as UTF-16.
+    export_command.add_argument("--out", required=True, type=Path, help="where to write the JSON")
     world = commands.add_parser("world", help="the SYNTHETIC demo agency on a real road map")
     world_commands = world.add_subparsers(dest="action", required=True)
     world_commands.add_parser("map", help="download and pin the road graph, once")
@@ -1066,6 +1121,13 @@ def main(argv: list[str] | None = None) -> None:
         run_replan_sweep()
     elif args.command == "rota":
         run_sweep(args.first_day, args.seed)
+    elif args.command == "fhir" and args.action == "install-validator":
+        fhir_check.install()
+        print("installed and checked:", "; ".join(fhir_check.problems()) or "no problems")
+    elif args.command == "fhir" and args.action == "validate":
+        run_fhir_validate(args.files)
+    elif args.command == "fhir":
+        run_fhir_export(args.client, args.out)
     elif args.action == "rank":
         run_rank(args.model, args.arm, args.sets)
     elif args.action == "tamper":

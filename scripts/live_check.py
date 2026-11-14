@@ -18,6 +18,11 @@ from urllib.parse import urlsplit
 FLOOD = 150
 CONNECTIONS = 10
 WINDOW_SECONDS = 10.0
+# Cloudflare's counters can lag "up to a few seconds" behind the requests they count
+# (https://developers.cloudflare.com/waf/rate-limiting-rules/), so a burst that ends in about
+# 3 s can finish before the limit takes effect. Pacing spreads it over about 7 s, still inside
+# one window, so the later requests arrive after the counter has caught up.
+PACE_SECONDS = 0.2
 HEADERS = ["content-security-policy", "x-content-type-options", "referrer-policy"]
 
 
@@ -46,7 +51,11 @@ def check_redirect(host: str) -> bool:
 
 def burst(host: str, count: int) -> list[int]:
     conn = http.client.HTTPSConnection(host, timeout=10)
-    return [get(conn, "/healthz").status for _ in range(count)]
+    statuses = []
+    for _ in range(count):
+        statuses.append(get(conn, "/healthz").status)
+        time.sleep(PACE_SECONDS)
+    return statuses
 
 
 def check_flood(host: str) -> bool:

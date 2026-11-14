@@ -33,6 +33,8 @@ inspectors' own scores.
 5. **Visit import (built).** Checks an old care system's visit export row by row against the plan.
    A row that cannot be trusted is held in quarantine with its reasons, never repaired by
    guessing; a usable row that needs a look is flagged.
+6. **FHIR export (built).** Writes one client's record in FHIR R4, the health-records standard,
+   for another system to read. Only what people recorded is exported (see below).
 
 <p>
   <img src="screenshots/carer-day.png" width="240" alt="A carer's day on a phone: the visit to write up, the next visit and when to leave">
@@ -147,6 +149,55 @@ Docker only, not through Kubernetes.
 - **Possible tampering.** A small classifier (PIGuard) flags notes that look like an attempt to
   instruct the software. A flag only adds a note to the register; it never removes anything.
 
+## Export a client's record as FHIR
+
+[FHIR](https://hl7.org/fhir/R4/) (Fast Healthcare Interoperability Resources) is HL7's standard
+for exchanging health records as small JSON "resources"; a Bundle is a set of them. UK Core, the
+UK's base set of FHIR profiles, is built on FHIR R4. `homecare fhir export` writes one client's
+record as a FHIR R4 Bundle. It reads the accounts-mode database on the laptop; the web app has no
+export endpoint.
+
+```
+SIGN_IN=accounts AUDIT_KEY=<64 hex characters> uv run homecare fhir export --client C45 --out c45.json
+```
+
+| In the app | In FHIR R4 |
+|---|---|
+| The client | Patient |
+| Each carer who wrote a note, and each person who decided a concern | Practitioner |
+| Each visit with a note | Encounter (class "home health", with the visit's planned times in UK time) |
+| Each note, word for word | DocumentReference; an addition "appends" to the note it adds to |
+| Each concern a person confirmed | Flag ("safety" for safeguarding, "clinical" for deterioration), linked to its note |
+
+- **Only what people recorded leaves.** A concern is exported only from a person's newest
+  decision on it: confirmed, moved to another category, or added because the model missed it. A
+  finding nobody has decided on, or one a person rejected, is not exported, and neither are the
+  model's quotes, reasons or scores. A receiving system may act on a Flag, so the model never
+  writes one.
+- **Marked as test data.** Every resource carries HL7's security label for test data (`HTEST`,
+  "simulated or synthetic health data"), so no system can take it for a real person's record.
+- **Audited.** Each export adds an entry to the audit log (the client, the number of resources and
+  the file's SHA-256), never its text.
+- **Repeatable.** The same database always gives the same file.
+- **How it is checked** (`tests/test_fhir.py`): every resource is validated with an independent
+  FHIR library (fhir.resources, whose R4B models match FHIR R4 for every resource used here);
+  every code with a required binding is one the specification allows; every reference resolves
+  to exactly one entry; the records match a direct database query; nothing from another client
+  appears; and the Flags match decisions planted by hand. Each check was also run once with its
+  protection broken, to see it fail.
+- **UK Core.** Patient, Practitioner and Encounter claim the UK Core 2.0.2 profiles. HL7's own
+  validator checks every client's Bundle against FHIR R4 and UK Core with no errors, offline (no
+  record is sent to a terminology server): `uv run homecare fhir install-validator` downloads the
+  pinned validator and a Java runtime into `tools/fhir/` (Windows), and
+  `uv run homecare fhir validate FILE...` runs it. `tests/test_fhir_profiles.py` runs it on every
+  check where it is installed, with controls that must fail: a visit with no status, and two NHS
+  numbers on a UK Core Patient.
+- **Limits.** UK Core has no Flag or DocumentReference profile, so those two are checked against
+  base FHIR R4. Resources carry no human-readable narrative (the validator's one best-practice
+  warning). There is no NHS number, because the synthetic clients have none. Visit times are the
+  rota's plan: in the synthetic agency visits happen as planned, and imported check-in times are
+  not used.
+
 ## How it is checked
 
 - `uv run python scripts/check.py` runs formatting, linting, type checks and every test.
@@ -184,6 +235,8 @@ Docker only, not through Kubernetes.
 | Walk a running copy as a phone user (needs Playwright's Chromium) | `uv run python scripts/phone_walk.py <link> <screenshot folder>` |
 | Import a visit export into the accounts-mode database | `SIGN_IN=accounts uv run homecare platform import FILE` |
 | Add an account for accounts mode (asks for a password) | `uv run homecare platform user NAME --role lead` |
+| Export one client's record as FHIR R4 (accounts mode) | `SIGN_IN=accounts uv run homecare fhir export --client C45 --out c45.json` |
+| Check FHIR files with HL7's validator against FHIR R4 and UK Core (install it once first) | `uv run homecare fhir install-validator`, then `uv run homecare fhir validate c45.json` |
 
 **Research runs.** These need local model files and a GPU. The notes commands run models with
 [llama.cpp](https://github.com/ggml-org/llama.cpp)'s `llama-server`. The model files listed in
@@ -243,6 +296,7 @@ All are optional.
 | `src/homecare/app/` | The web app: screens, sign-in, the audit log, the route sketch, the importer, and its data (`data/`: demo week, road file, sample export) |
 | `web/` | The carer app's TypeScript (`app/` for the page, `sw/` for the offline worker), compiled into `src/homecare/app/static/` |
 | `src/homecare/imports/` | Checking a visit export, and the sample export with its planted faults |
+| `src/homecare/fhir.py` | One client's record as a FHIR R4 Bundle |
 | `src/homecare/retention/` | The simulated workforce and the retention model |
 | `src/homecare/notes/` | Reading notes: categories, the extractor, quote checks, the review queue's rules |
 | `src/homecare/world/` | The synthetic agency: clients, carers, visits, the road map, the note writer |
