@@ -34,7 +34,7 @@ lab = [
 # Queue-ranking and tamper-tag studies (CPU encoders). Capped at the newest releases at least two
 # weeks old when added (2026-11-06), to lower supply-chain risk. On Windows, PyPI's torch is CPU-only.
 rank = [
-    "torch>=2.14.1,<2.15",
+    "torch>=2.14.1,<2.16",
     "transformers>=5.20.2,<5.21",
 ]
 
