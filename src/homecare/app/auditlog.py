@@ -2,19 +2,19 @@
 live in the database; the signing key and the newest MAC (the anchor) live outside it. The
 chain itself is `homecare.audit`.
 
-Entries hold IDs and labels only, never the text of a note. Appends are serialized by a lock, so
-the anchor file always names the newest record.
+Entries hold IDs and labels only, never the text of a note. An append holds the app's one write
+lock (`db.WRITE`) from reading the newest MAC to writing the anchor, so appends never overlap
+and the anchor file always names the newest record. When a request logs part-way through its
+own write, it already holds that lock, and the append joins its transaction.
 """
 
 import json
 import sqlite3
-import threading
 from pathlib import Path
 from typing import Any
 
 from homecare import audit
-
-LOCK = threading.Lock()
+from homecare.app import db
 
 
 def chain(connection: sqlite3.Connection) -> list[dict[str, Any]]:
@@ -23,7 +23,7 @@ def chain(connection: sqlite3.Connection) -> list[dict[str, Any]]:
 
 
 def record(connection: sqlite3.Connection, key: bytes, anchor: Path, entry: dict[str, Any]) -> None:
-    with LOCK:
+    with db.WRITE:
         last = connection.execute("SELECT mac FROM audit ORDER BY position DESC LIMIT 1").fetchone()
         mac = audit.mac(key, last["mac"] if last else audit.GENESIS, entry)
         connection.execute(

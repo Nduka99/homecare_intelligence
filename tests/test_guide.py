@@ -108,3 +108,12 @@ def test_every_link_in_the_guide_lands_on_exactly_one_place(tmp_path: Path) -> N
     assert into_guide
     for target in into_guide:
         assert guide.count(f'id="{target}"') == 1, target
+
+
+def test_the_guide_says_what_a_busy_or_full_demo_shows(tmp_path: Path) -> None:
+    """The guide tells a visitor about the pages the app shows when it is busy or restarting,
+    in the words those pages use."""
+    guide = guide_main(make(tmp_path))
+    assert "busy or restarting" in guide and "fresh data" in guide
+    assert "busy" in main.BUSY[0] and "restarting" in main.RESTARTING[0]
+    assert "fresh data" in main.RESTARTING[1]

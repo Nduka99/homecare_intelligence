@@ -17,9 +17,14 @@ import secrets
 import sqlite3
 from typing import Any
 
+from homecare.app import db
+
 COOKIE = "__Host-session"
 IDLE_SECONDS = 30 * 60
 ABSOLUTE_SECONDS = 8 * 60 * 60
+# A session's last-seen time is written at most this often, so most page views write nothing
+# to the database; a session may so end up to a minute before 30 idle minutes.
+SEEN_EVERY_SECONDS = 60
 FAILURES = 5
 LOCKOUT_SECONDS = 15 * 60
 SCRYPT_N = 2**17
@@ -50,13 +55,19 @@ def token_hash(token: str) -> str:
 
 
 def start_session(connection: sqlite3.Connection, user: str | None, now: float) -> str:
-    """A new session (signed out when `user` is None); returns the cookie's token."""
+    """A new session (signed out when `user` is None); returns the cookie's token. Expired
+    sessions are removed first, so their number stays bounded by the sign-in rate."""
     token = secrets.token_urlsafe(32)
-    connection.execute(
-        "INSERT INTO sessions VALUES (?, ?, ?, ?, ?)",
-        (token_hash(token), user, secrets.token_urlsafe(32), now, now),
-    )
-    connection.commit()
+    with db.WRITE:
+        connection.execute(
+            "DELETE FROM sessions WHERE seen < ? OR created < ?",
+            (now - IDLE_SECONDS, now - ABSOLUTE_SECONDS),
+        )
+        connection.execute(
+            "INSERT INTO sessions VALUES (?, ?, ?, ?, ?)",
+            (token_hash(token), user, secrets.token_urlsafe(32), now, now),
+        )
+        connection.commit()
     return token
 
 
@@ -70,20 +81,26 @@ def find_session(connection: sqlite3.Connection, token: str, now: float) -> dict
     if now - row["seen"] > IDLE_SECONDS or now - row["created"] > ABSOLUTE_SECONDS:
         end_session(connection, token)
         return None
-    connection.execute(
-        "UPDATE sessions SET seen = ? WHERE token_hash = ?", (now, row["token_hash"])
-    )
-    connection.commit()
+    if now - row["seen"] > SEEN_EVERY_SECONDS:
+        with db.WRITE:
+            connection.execute(
+                "UPDATE sessions SET seen = ? WHERE token_hash = ?", (now, row["token_hash"])
+            )
+            connection.commit()
     return dict(row)
 
 
 def end_session(connection: sqlite3.Connection, token: str) -> None:
-    connection.execute("DELETE FROM sessions WHERE token_hash = ?", (token_hash(token),))
-    connection.commit()
+    with db.WRITE:
+        connection.execute("DELETE FROM sessions WHERE token_hash = ?", (token_hash(token),))
+        connection.commit()
 
 
 def csrf_ok(session: dict[str, Any] | None, submitted: str) -> bool:
-    return session is not None and hmac.compare_digest(session["csrf"], submitted)
+    """Compared as bytes: `compare_digest` refuses text with non-ASCII characters."""
+    if session is None:
+        return False
+    return hmac.compare_digest(session["csrf"].encode(), submitted.encode())
 
 
 def check_password(connection: sqlite3.Connection, user_id: str, password: str, now: float) -> str:
@@ -93,15 +110,17 @@ def check_password(connection: sqlite3.Connection, user_id: str, password: str, 
         return "wrong"
     if user["locked_until"] > now:
         return "locked"
-    if password_matches(password, user["password"]):
-        connection.execute("UPDATE users SET failures = 0 WHERE id = ?", (user_id,))
-        connection.commit()
+    if password_matches(password, user["password"]):  # slow by design, so outside the lock
+        with db.WRITE:
+            connection.execute("UPDATE users SET failures = 0 WHERE id = ?", (user_id,))
+            connection.commit()
         return "ok"
     failures = user["failures"] + 1
     locked_until = now + LOCKOUT_SECONDS if failures >= FAILURES else 0
-    connection.execute(
-        "UPDATE users SET failures = ?, locked_until = ? WHERE id = ?",
-        (0 if locked_until else failures, locked_until, user_id),
-    )
-    connection.commit()
+    with db.WRITE:
+        connection.execute(
+            "UPDATE users SET failures = ?, locked_until = ? WHERE id = ?",
+            (0 if locked_until else failures, locked_until, user_id),
+        )
+        connection.commit()
     return "locked" if locked_until else "wrong"

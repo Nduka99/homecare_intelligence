@@ -11,13 +11,17 @@ edited. Every request is checked on the server, so a carer cannot reach another 
 changing a URL.
 """
 
+import asyncio
 import datetime
+import functools
 import hashlib
 import json
 import mimetypes
 import os
 import re
 import secrets
+import signal
+import sqlite3
 import tempfile
 import time
 import uuid
@@ -32,9 +36,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.requests import ClientDisconnect
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from homecare.app import auditlog, auth, db, importer, maps, screens, seed
+from homecare.app import auditlog, auth, db, importer, limits, maps, screens, seed
 
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 STATIC = Path(__file__).parent / "static"
@@ -66,7 +71,36 @@ REFERRALS = seed.REFERRALS
 VISITOR = "__Host-visitor"
 # A Send's idempotency key: a version 4 UUID, made by the server or the carer's phone.
 KEY = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+# A visitor cookie the server made: `secrets.token_urlsafe(32)`. Any other value is replaced.
+VISITOR_TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")
 LONGEST_NOTE = 4000
+FORM_TYPE = "application/x-www-form-urlencoded"
+# Limits on a posted form, checked before any other work. The longest note (4,000 characters of
+# up to four bytes, each byte percent-encoded as three) is about 48 KB; the busiest forms (a
+# referral's profile, a note's decisions) have fewer than 20 fields; a weak phone signal sends
+# the largest form in well under the time allowed.
+LARGEST_FORM = 64 * 1024
+MOST_FIELDS = 200
+FORM_SECONDS = 20.0
+# Forms from one visitor's address (limits.py): this many at a time, and SAVES_PER_WINDOW in
+# each window: five times the 15 forms one person sends following the guide through all four
+# roles, rounded up.
+FORMS_AT_ONCE = 4
+SAVES_PER_WINDOW = 100
+WINDOW_SECONDS = 600.0
+# The demo's database may grow to this, inside the 64 MiB in-memory folder it lives in; at the
+# budget the demo restarts with fresh data (`restart`).
+DEMO_BUDGET = 40 * 1024 * 1024
+# At most this many requests at once: the 40 worker threads that run the pages, and a queue half
+# their size ("small queue lengths relative to the thread pool size (e.g., 50% or less)",
+# Google SRE book, ch. 22). Past it, the busy page is sent at once.
+IN_FLIGHT = 60
+BUSY = ("The service is busy", "Nothing was saved. Try again in a moment.")
+RESTARTING = (
+    "The demo is restarting",
+    "The demo has filled its storage and is starting again with fresh data. Nothing you just "
+    "sent was saved. Try again in a minute.",
+)
 REFUSED_PROFILE = {
     "no visit": "Not saved: choose at least one visit. If the referral gives none, ask the "
     "referrer.",
@@ -74,8 +108,22 @@ REFUSED_PROFILE = {
     "Ask the referrer, then tick “I have asked the referrer”.",
 }
 HTTP_ERRORS = {
+    400: ("This form could not be read", "Nothing was saved. Go back and send it again."),
     404: ("Page not found", "There is no page at this address."),
     405: ("This page cannot be opened this way", "Open it from a link or button in the app."),
+    408: (
+        "This form took too long to arrive",
+        "Nothing was saved. Check your signal, then send it again.",
+    ),
+    413: (
+        "This form is too long",
+        f"Nothing was saved. A note can be up to {LONGEST_NOTE:,} characters.",
+    ),
+    429: (
+        "Too many forms in a short time",
+        "Nothing was saved. Many forms came from your connection at once: wait a few minutes, "
+        "then try again.",
+    ),
 }
 SIGNIN_MESSAGES = {
     "wrong": "Wrong username or password.",
@@ -134,7 +182,9 @@ def security_headers(app: ASGIApp, demo: bool) -> ASGIApp:
         if scope["type"] != "http":
             await app(scope, receive, send)
             return
-        known = Request(scope).cookies.get(VISITOR)
+        known = Request(scope).cookies.get(VISITOR, "")
+        if not VISITOR_TOKEN.fullmatch(known):
+            known = ""
         arriving = secrets.token_urlsafe(32) if demo and not known else None
         scope.setdefault("state", {})["visitor"] = known or arriving
 
@@ -154,9 +204,86 @@ def security_headers(app: ASGIApp, demo: bool) -> ASGIApp:
     return middleware
 
 
+def load_shedding(app: ASGIApp, busy_page: bytes) -> ASGIApp:
+    """Past IN_FLIGHT requests at once, answer at once with the busy page instead of queueing,
+    so an overload slows no one already being served. The health check is never turned away: a
+    busy app the kubelet took for a dead one would be restarted, which wipes the demo."""
+    in_flight = 0
+    head = [
+        (b"content-type", b"text/html; charset=utf-8"),
+        (b"content-length", str(len(busy_page)).encode()),
+        (b"retry-after", b"5"),
+    ]
+
+    async def middleware(scope: Scope, receive: Receive, send: Send) -> None:
+        nonlocal in_flight
+        if scope["type"] != "http" or scope["path"] == "/healthz":
+            await app(scope, receive, send)
+            return
+        if in_flight >= IN_FLIGHT:
+            await send({"type": "http.response.start", "status": 503, "headers": head})
+            await send({"type": "http.response.body", "body": busy_page})
+            return
+        in_flight += 1
+        try:
+            await app(scope, receive, send)
+        finally:
+            in_flight -= 1
+
+    return middleware
+
+
+def restart() -> None:
+    """Stop the server gracefully: Kubernetes and compose start it again, and the demo always
+    starts from a fresh database. Used when the demo's storage is full."""
+    signal.raise_signal(signal.SIGTERM)
+
+
+# The rest of a refused body is never read, so the connection cannot carry another request: it
+# is closed (RFC 9110, 408 and 413).
+CLOSE = {"Connection": "close"}
+
+
 async def form_fields(request: Request) -> dict[str, str]:
-    """A posted form's fields (first value of each), parsed with the standard library."""
-    fields = parse_qs((await request.body()).decode("utf-8"), keep_blank_values=True)
+    """A posted form's fields (first value of each), parsed with the standard library. One
+    address may send FORMS_AT_ONCE forms at a time and SAVES_PER_WINDOW in each window. The body
+    is read as it arrives, so a form over LARGEST_FORM bytes or FORM_SECONDS is refused before it
+    is all held in memory; it must be UTF-8 with at most MOST_FIELDS fields. A refusal is a page,
+    and nothing is saved."""
+    state = request.app.state.limits
+    # Only the tunnel can reach the app, so Cloudflare's header names the visitor's address.
+    address = request.headers.get("cf-connecting-ip", "")
+    if not address and request.client:
+        address = request.client.host
+    now = time.time()
+    refused = limits.admit(state, address, now, SAVES_PER_WINDOW, WINDOW_SECONDS, FORMS_AT_ONCE)
+    if refused == limits.AT_ONCE:
+        raise StarletteHTTPException(429, headers=CLOSE | {"Retry-After": "5"})
+    if refused == limits.WINDOW:
+        wait = str(limits.seconds_left(state, now, WINDOW_SECONDS))
+        raise StarletteHTTPException(429, headers=CLOSE | {"Retry-After": wait})
+    try:
+        return await read_form(request)
+    finally:
+        limits.arrived(state, address)
+
+
+async def read_form(request: Request) -> dict[str, str]:
+    body = bytearray()
+    try:
+        async with asyncio.timeout(FORM_SECONDS):
+            async for chunk in request.stream():
+                body += chunk
+                if len(body) > LARGEST_FORM:
+                    raise StarletteHTTPException(413, headers=CLOSE)
+    except TimeoutError:
+        raise StarletteHTTPException(408, headers=CLOSE) from None
+    except ClientDisconnect:
+        raise StarletteHTTPException(400) from None  # the sender has gone; nothing to answer
+    try:
+        fields = parse_qs(body.decode("utf-8"), keep_blank_values=True, max_num_fields=MOST_FIELDS)
+    except ValueError:  # bytes that are not UTF-8, or too many fields
+        raise StarletteHTTPException(400) from None
     return {name: values[0] for name, values in fields.items()}
 
 
@@ -166,6 +293,8 @@ FormFields = Annotated[dict[str, str], Depends(form_fields)]
 def create_app(settings: dict[str, Any]) -> FastAPI:
     demo = settings["mode"] == "demo"
     path: Path = settings["database"]
+    # The demo's storage budget; accounts mode keeps real records and is never capped.
+    budget: int | None = settings.get("budget", DEMO_BUDGET if demo else None)
     if demo:
         path.unlink(missing_ok=True)
         settings["anchor"].unlink(missing_ok=True)
@@ -180,7 +309,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
     db.prepare(path, demo_week)
     if demo:
         add_demo_users(path)
-    connection = db.connect(path)
+    connection = db.connect(path, budget)
     db.load_referrals(connection, referral_data)
     found = auditlog.problems(connection, settings["key"], settings["anchor"])
     connection.close()
@@ -188,7 +317,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         raise SystemExit("the audit log does not verify: " + "; ".join(found))
     if demo:
         # The committed SYNTHETIC export, through the same checks as any import.
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         loaded = importer.store(connection, importer.sample(), importer.SAMPLE.name, "the system",
                                 importer.reference(demo_week))  # fmt: skip
         auditlog.record(connection, settings["key"], settings["anchor"],
@@ -196,14 +325,27 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                          "sha256": loaded["sha256"], "kept": loaded["kept"],
                          "quarantined": loaded["quarantined"]})  # fmt: skip
         connection.close()
+        if budget is not None and path.stat().st_size > budget / 2:
+            # A demo that started nearly full would fill and restart again and again.
+            raise SystemExit("the demo's starting data fills more than half its storage budget")
 
     # No API documentation pages: the app is a website, and the route list is not for visitors.
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.limits = limits.new()
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     # The route sketch is up to about 100 KB of SVG; compressed, it suits a phone on a weak
     # signal. BREACH needs another site to make the browser send guesses with the user's
     # session; the session cookie is SameSite=Strict, so such requests arrive signed out.
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    # Made once, so turning a request away costs no rendering and no database.
+    busy = {
+        "title": BUSY[0],
+        "message": BUSY[1],
+        "back": "/",
+        "back_label": "Go to your start page",
+    }
+    busy_page = TEMPLATES.get_template("problem.html").render(busy | {"demo": demo}).encode()
+    app.add_middleware(load_shedding, busy_page=busy_page)
     app.add_middleware(security_headers, demo=demo)
 
     def log(connection: Any, entry: dict[str, Any]) -> None:
@@ -223,13 +365,22 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             set_session_cookie(response, token)
         return response
 
+    @functools.lru_cache(maxsize=256)
+    def drawn(home: str, stops: tuple[str, ...]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """A route's sketch and its live-map data. Both come only from the pinned road map, so
+        each route is drawn once (about 45 ms) and kept: at most one per carer and day. The
+        templates only read them."""
+        return maps.sketch(road_map, home, list(stops)), maps.live(road_map, home, list(stops))
+
     @app.get("/healthz")
-    def healthz() -> dict[str, str]:
+    async def healthz() -> dict[str, str]:
+        """Answered on the event loop, not by a worker thread, so it answers while every
+        thread is busy with pages."""
         return {"status": "ok", "build": BUILD}
 
     @app.get("/")
     def home(request: Request) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             session = auth.find_session(
                 connection, request.cookies.get(auth.COOKIE, ""), time.time()
@@ -254,7 +405,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/signin", response_class=HTMLResponse)
     def signin_page(request: Request) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             now = time.time()
             token = request.cookies.get(auth.COOKIE, "")
@@ -275,7 +426,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.post("/signin")
     def signin(request: Request, fields: FormFields) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             now = time.time()
             token = request.cookies.get(auth.COOKIE, "")
@@ -301,7 +452,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.post("/signout")
     def signout(request: Request, fields: FormFields) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             token = request.cookies.get(auth.COOKIE, "")
             session = auth.find_session(connection, token, time.time())
@@ -351,9 +502,12 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.exception_handler(StarletteHTTPException)
     def http_error(request: Request, error: StarletteHTTPException) -> HTMLResponse:
-        """An unknown address or a wrong method gets a page like every other, never JSON."""
+        """An unknown address, a wrong method or a refused form gets a page like every other,
+        never JSON."""
         title, message = HTTP_ERRORS.get(error.status_code, HTTP_ERRORS[404])
-        return problem(request, error.status_code, title, message, "/", "Go to your start page")
+        response = problem(request, error.status_code, title, message, "/", "Go to your start page")
+        response.headers.update(error.headers or {})
+        return response
 
     @app.exception_handler(Exception)
     def server_error(request: Request, error: Exception) -> HTMLResponse:
@@ -364,6 +518,22 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         response = problem(request, 500, title, message, "/", "Go to your start page")
         response.headers.update(HEADERS)
         return response
+
+    @app.exception_handler(sqlite3.OperationalError)
+    def database_error(request: Request, error: sqlite3.OperationalError) -> HTMLResponse:
+        """The write that failed was rolled back whole. A full demo restarts with fresh data; a
+        database still busy after its wait is an overload; anything else is a server fault."""
+        code = error.sqlite_errorcode & 0xFF  # the primary result code under an extended one
+        if code == sqlite3.SQLITE_FULL and demo:
+            restart()
+            response = problem(request, 503, *RESTARTING, "/", "Go to your start page")
+            response.headers["Retry-After"] = "30"
+            return response
+        if code == sqlite3.SQLITE_BUSY:
+            response = problem(request, 503, *BUSY, "/", "Go to your start page")
+            response.headers["Retry-After"] = "5"
+            return response
+        return server_error(request, error)
 
     def expired(request: Request, back: str) -> HTMLResponse:
         message = "Nothing was saved. Go back and the page will have a fresh form."
@@ -388,12 +558,17 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         ).fetchone()
 
     def chosen_day(raw: str | None) -> int:
+        """The day asked for if it is one of the week's, else the last day. Compared as text:
+        `int()` refuses some characters `isdigit()` accepts ("²"), and very long numbers."""
         days: list[int] = demo_week["days"]
-        return int(raw) if raw and raw.isdigit() and int(raw) in days else days[-1]
+        for day in days:
+            if raw == str(day):
+                return day
+        return days[-1]
 
     @app.get("/queue", response_class=HTMLResponse)
     def queue(request: Request, day: str | None = None) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("lead",))
             if isinstance(found, Response):
@@ -414,7 +589,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/notes/{note_id}", response_class=HTMLResponse)
     def note(request: Request, note_id: str, choose: str | None = None) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("lead", "carer"))
             if isinstance(found, Response):
@@ -447,7 +622,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.post("/notes/{note_id}/decisions")
     def decide(request: Request, note_id: str, fields: FormFields) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("lead",))
             if isinstance(found, Response):
@@ -469,36 +644,39 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             if not detail["read"]:
                 route = "not read by the model"
             now = time.time()
-            for group in detail["findings"]:
-                label = fields.get(f"finding-{group['id']}", "")
-                if label not in screens.LABELS:
-                    continue
-                category = fields.get(f"category-{group['id']}", "")
-                if label != "wrong category" or category not in screens.CATEGORIES_SET:
-                    category = ""
-                # One decision on the screen labels every stored finding in the group.
-                for finding in group["members"]:
+            with db.WRITE:
+                for group in detail["findings"]:
+                    label = fields.get(f"finding-{group['id']}", "")
+                    if label not in screens.LABELS:
+                        continue
+                    category = fields.get(f"category-{group['id']}", "")
+                    if label != "wrong category" or category not in screens.CATEGORIES_SET:
+                        category = ""
+                    # One decision on the screen labels every stored finding in the group.
+                    for finding in group["members"]:
+                        connection.execute(
+                            "INSERT INTO decisions (note, finding, label, category, reviewer, "
+                            "visitor, route, decided) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                            (note_id, finding["id"], label, category or None, user["id"],
+                             visitor_of(request), route, now),
+                        )  # fmt: skip
+                        log(connection, {"event": "decision", "user": user["id"], "note": note_id,
+                                         "finding": finding["id"], "label": label})  # fmt: skip
+                if missed in screens.CATEGORIES_SET | {screens.NOTHING_MISSED}:
+                    # The whole note's verdict, with no finding: a missed concern and its category,
+                    # or "not a concern", meaning the person read it all and found nothing missed.
+                    label = (
+                        "missed concern" if missed in screens.CATEGORIES_SET else "not a concern"
+                    )
                     connection.execute(
-                        "INSERT INTO decisions (note, finding, label, category, reviewer, "
-                        "visitor, route, decided) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        (note_id, finding["id"], label, category or None, user["id"],
+                        "INSERT INTO decisions (note, label, category, reviewer, visitor, route, "
+                        "decided) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (note_id, label, missed if label == "missed concern" else None, user["id"],
                          visitor_of(request), route, now),
                     )  # fmt: skip
                     log(connection, {"event": "decision", "user": user["id"], "note": note_id,
-                                     "finding": finding["id"], "label": label})  # fmt: skip
-            if missed in screens.CATEGORIES_SET | {screens.NOTHING_MISSED}:
-                # The whole note's verdict, with no finding: a missed concern and its category,
-                # or "not a concern", meaning the person read it all and found nothing missed.
-                label = "missed concern" if missed in screens.CATEGORIES_SET else "not a concern"
-                connection.execute(
-                    "INSERT INTO decisions (note, label, category, reviewer, visitor, route, "
-                    "decided) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (note_id, label, missed if label == "missed concern" else None, user["id"],
-                     visitor_of(request), route, now),
-                )  # fmt: skip
-                log(connection, {"event": "decision", "user": user["id"], "note": note_id,
-                                 "label": label})  # fmt: skip
-            connection.commit()
+                                     "label": label})  # fmt: skip
+                connection.commit()
             following = screens.next_note(connection, note_id, visitor_of(request))
             return to(f"/notes/{following}" if following else f"/queue?day={detail['day']}")
         finally:
@@ -506,7 +684,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/team", response_class=HTMLResponse)
     def team(request: Request) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("manager",))
             if isinstance(found, Response):
@@ -524,7 +702,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/today", response_class=HTMLResponse)
     def today(request: Request, day: str | None = None, sent: str | None = None) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("carer",))
             if isinstance(found, Response):
@@ -538,9 +716,8 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             sketch = None
             live = None
             if sheet["visits"]:
-                stops = [junctions[visit["client_id"]] for visit in sheet["visits"]]
-                sketch = maps.sketch(road_map, homes[carer], stops)
-                live = maps.live(road_map, homes[carer], stops)  # the live map, with signal
+                stops = tuple(junctions[visit["client_id"]] for visit in sheet["visits"])
+                sketch, live = drawn(homes[carer], stops)  # live: the live map, with signal
             for visit in sheet["visits"]:
                 visit["directions"] = maps.directions(road_map, junctions[visit["client_id"]])
             context = {
@@ -602,7 +779,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/visits/{visit_id}/note", response_class=HTMLResponse)
     def write(request: Request, visit_id: str) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("carer",))
             if isinstance(found, Response):
@@ -620,7 +797,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         """Store a carer's note. The carer comes from the session, never the form. A Send carries
         an idempotency key: sent again with the same words it stores nothing new; with other
         words it is refused (422), as the IETF Idempotency-Key draft advises."""
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("carer",))
             if isinstance(found, Response):
@@ -652,37 +829,40 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 response.status_code = 400
                 return response
             sent = f"{sheet}&sent=1"
-            earlier = connection.execute(
-                "SELECT visit, body FROM notes WHERE carer = ? AND idempotency_key = ?",
-                (carer, key),
-            ).fetchone()
-            if earlier is not None:
-                if tuple(earlier) == (visit_id, body):
-                    return to(sent)  # the same Send again: already stored
-                message = "This Send was used for different words, and that note is kept."
-                return problem(request, 422, "This note was already sent", message, sheet)
-            # A record never holds two first notes: once the carer has written this visit up, a
-            # Send is an addition to the first note, even from a form saved before it was sent.
-            firsts = [note["id"] for note in own if note["amends"] is None]
-            amends = firsts[0] if firsts else None
-            note_id = "note-" + secrets.token_hex(8)
-            connection.execute(
-                "INSERT INTO notes (id, visit, client, carer, day, body, tamper, "
-                "tamper_probability, source, amends, idempotency_key, written, visitor) "
-                "VALUES (?, ?, ?, ?, ?, ?, 0, 0, 'app', ?, ?, ?, ?)",
-                (note_id, visit_id, visit["client"], carer, visit["day"], body, amends, key,
-                 time.time(), visitor),
-            )  # fmt: skip
-            log(connection, {"event": "write note", "user": user["id"], "note": note_id,
-                             "visit": visit_id, "amends": amends})  # fmt: skip
-            connection.commit()
+            with db.WRITE:  # looking for an earlier copy and storing it are one step
+                earlier = connection.execute(
+                    "SELECT visit, body FROM notes WHERE carer = ? AND idempotency_key = ?",
+                    (carer, key),
+                ).fetchone()
+                if earlier is not None:
+                    if tuple(earlier) == (visit_id, body):
+                        return to(sent)  # the same Send again: already stored
+                    message = "This Send was used for different words, and that note is kept."
+                    return problem(request, 422, "This note was already sent", message, sheet)
+                # A record never holds two first notes: once the carer has written this visit up, a
+                # Send is an addition to the first note, even from a form saved before it was sent.
+                # Read again under the lock, so two Sends at once cannot both be first notes.
+                own = screens.own_notes(connection, carer, visit_id, visitor)
+                firsts = [note["id"] for note in own if note["amends"] is None]
+                amends = firsts[0] if firsts else None
+                note_id = "note-" + secrets.token_hex(8)
+                connection.execute(
+                    "INSERT INTO notes (id, visit, client, carer, day, body, tamper, "
+                    "tamper_probability, source, amends, idempotency_key, written, visitor) "
+                    "VALUES (?, ?, ?, ?, ?, ?, 0, 0, 'app', ?, ?, ?, ?)",
+                    (note_id, visit_id, visit["client"], carer, visit["day"], body, amends, key,
+                     time.time(), visitor),
+                )  # fmt: skip
+                log(connection, {"event": "write note", "user": user["id"], "note": note_id,
+                                 "visit": visit_id, "amends": amends})  # fmt: skip
+                connection.commit()
             return to(sent)
         finally:
             connection.close()
 
     @app.get("/rota", response_class=HTMLResponse)
     def rota(request: Request, day: str | None = None, carer: str | None = None) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("coordinator",))
             if isinstance(found, Response):
@@ -695,8 +875,8 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             the_day = screens.rota_day(connection, chosen, plan, reasons, carer)
             sketch = None
             if the_day["chosen"]:
-                stops = [junctions[visit["client_id"]] for visit in the_day["route"]]
-                sketch = maps.sketch(road_map, homes[the_day["chosen"]], stops)
+                stops = tuple(junctions[visit["client_id"]] for visit in the_day["route"])
+                sketch = drawn(homes[the_day["chosen"]], stops)[0]
             context = {
                 "user": user["id"],
                 "csrf": session["csrf"],
@@ -713,7 +893,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/rota/replan", response_class=HTMLResponse)
     def rota_replan(request: Request) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("coordinator",))
             if isinstance(found, Response):
@@ -732,7 +912,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/imports", response_class=HTMLResponse)
     def imports(request: Request) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("coordinator",))
             if isinstance(found, Response):
@@ -754,7 +934,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/referrals", response_class=HTMLResponse)
     def referrals(request: Request) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("coordinator",))
             if isinstance(found, Response):
@@ -793,7 +973,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
 
     @app.get("/referrals/{referral_id}", response_class=HTMLResponse)
     def referral(request: Request, referral_id: str) -> Response:
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("coordinator",))
             if isinstance(found, Response):
@@ -811,7 +991,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
     def confirm_referral(request: Request, referral_id: str, fields: FormFields) -> Response:
         """Store the profile a coordinator confirmed. Who confirmed it comes from the session,
         never the form, and the profile only from the form's known fields and values."""
-        connection = db.connect(path)
+        connection = db.connect(path, budget)
         try:
             found = signed_in(request, connection, ("coordinator",))
             if isinstance(found, Response):
@@ -838,15 +1018,17 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                     return no_referral(request)
                 response.status_code = 400
                 return response
-            cursor = connection.execute(
-                "INSERT INTO referral_decisions (referral, profile, decided_by, visitor, decided) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (referral_id, json.dumps(profile, sort_keys=True), user["id"],
-                 visitor_of(request), time.time()),
-            )  # fmt: skip
-            log(connection, {"event": "confirm referral", "user": user["id"],
-                             "referral": referral_id, "decision": cursor.lastrowid})  # fmt: skip
-            connection.commit()
+            with db.WRITE:
+                cursor = connection.execute(
+                    "INSERT INTO referral_decisions (referral, profile, decided_by, visitor, "
+                    "decided) VALUES (?, ?, ?, ?, ?)",
+                    (referral_id, json.dumps(profile, sort_keys=True), user["id"],
+                     visitor_of(request), time.time()),
+                )  # fmt: skip
+                decision = cursor.lastrowid
+                log(connection, {"event": "confirm referral", "user": user["id"],
+                                 "referral": referral_id, "decision": decision})  # fmt: skip
+                connection.commit()
             return to(f"{back}#who")
         finally:
             connection.close()

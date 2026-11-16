@@ -65,22 +65,27 @@ spec:
             limits:
               cpu: "1"
               memory: 512Mi
+          # /healthz answers on the app's event loop, never queued behind pages, so a busy app is
+          # not taken for a dead one (a restart would wipe the demo). Each check may take 2 s.
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8000
             periodSeconds: 5
+            timeoutSeconds: 2
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8000
             periodSeconds: 10
+            timeoutSeconds: 2
             failureThreshold: 3
           volumeMounts:
             - name: tmp
               mountPath: /tmp
       volumes:
-        # Writable, with /dev/shm, which every pod gets; in memory, as in compose.
+        # Writable, with /dev/shm, which every pod gets; in memory, as in compose. Its files count
+        # against the container's memory limit; the demo's database stops at 40 MiB inside it.
         - name: tmp
           emptyDir:
             medium: Memory

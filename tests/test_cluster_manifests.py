@@ -42,6 +42,11 @@ def test_both_workloads_are_locked_down() -> None:
         assert "limits:" in manifest
 
 
+def test_the_apps_health_checks_allow_two_seconds() -> None:
+    """Kubernetes' default is one second; a check that times out three times restarts the app."""
+    assert text("app.yaml").count("timeoutSeconds: 2") == 2
+
+
 def test_the_namespace_enforces_restricted_pod_security() -> None:
     assert "pod-security.kubernetes.io/enforce: restricted\n" in text("namespace.yaml")
 

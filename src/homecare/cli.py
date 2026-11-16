@@ -92,6 +92,18 @@ RETENTION = DATA / "retention"
 MIN_PASSWORD = 15
 
 
+def server_config() -> dict[str, Any]:
+    """How uvicorn serves the web app; `homecare serve` and the tests both use it.
+
+    - One worker process (uvicorn's default): the demo's database, the audit log's lock and the
+      per-address limits each live in one process.
+    - Idle connections kept 100 s: longer than cloudflared keeps one to the app (90 s, its
+      default), so the tunnel never sends a request on a connection the app has just closed.
+    - Shutdown finishes within 8 s, under compose's 10 s and Kubernetes' 30 s before a forced stop.
+    """
+    return {"timeout_keep_alive": 100, "timeout_graceful_shutdown": 8, "server_header": False}
+
+
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
@@ -1347,7 +1359,7 @@ def main(argv: list[str] | None = None) -> None:
             factory=True,
             host=args.host,
             port=args.port,
-            server_header=False,
+            **server_config(),
         )
     elif args.command == "models":
         found = models.problems(models.read(), models.FOLDER, quick=not args.full)

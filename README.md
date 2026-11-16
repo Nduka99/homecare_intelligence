@@ -138,6 +138,40 @@ minute), and the demo's data resets each time the app restarts. The note-reading
 part of it: it runs on the laptop's GPU, and on Windows (WSL2) a GPU reaches containers through
 Docker only, not through Kubernetes.
 
+### Limits that keep it up
+
+The demo is open to anyone, so it is built to stay up when someone sends more, larger, slower or
+stranger requests than a person would. When it refuses, it shows its own page that says nothing
+was saved, and it keeps what it already holds. The limits follow the OWASP API Security Top 10
+(2023, "Unrestricted Resource Consumption") and the overload chapters of Google's SRE book.
+
+| What could go wrong | What the app does |
+|---|---|
+| A form far larger than any note, or one that arrives very slowly | It reads at most 64 KiB and waits at most 20 s, then refuses (413 or 408) |
+| A form that is not UTF-8, or has hundreds of fields | Refused (400) |
+| Odd text in an address, a form or a cookie | Never a server error: a page or a redirect. Every route is fuzzed with [Hypothesis](https://hypothesis.works/) (`tests/test_fuzz_routes.py`) |
+| One address sending form after form | At most 4 at a time and 100 every 10 minutes, then a 429 page. The address is the one Cloudflare passes on; only the tunnel can reach the app, so it cannot be forged |
+| More requests at once than the server can work through | Past 60 in flight it answers at once with a "busy" page (503). The health check never waits behind pages, so Kubernetes does not mistake a busy app for a dead one and restart it |
+| Many saves at the same moment | Each write waits its turn in one lock in the app, from its first change to its commit, so writes queue instead of timing out inside SQLite, and a Send tapped twice is stored once |
+| The demo's storage filling up | The database stops at 40 MiB, inside its 64 MiB in-memory folder. The save that reaches the limit is refused whole, and the demo restarts itself with fresh data |
+| Sessions left behind | Expired ones are removed whenever a session starts |
+| The tunnel reusing an idle connection | The app keeps idle connections 100 s, longer than the tunnel's 90 s |
+
+`tests/test_robustness.py` attacks each limit and passes only when the attack fails; each test was
+also run with its limit switched off, and failed. `uv run python scripts/load_check.py` runs the
+same image with the pod's limits (1 CPU, 512 MiB) in a local container, ramps from 10 to 240
+visitors at once, then fills the demo's storage and checks that it restarts clean.
+
+Measured with that check: the pod's one CPU serves about 95 requests a second. Past that, pages
+queue: with 30 visitors sending requests back to back, 95% were answered within 0.85 s, against
+the 0.5 s the check asked for. With 60 or more at once, the busy page takes the excess. At every
+load tried, no request failed or timed out, and every note a visitor was told was sent was
+stored once.
+
+What these limits do not cover: one copy of the app runs, on one laptop, so losing it takes the
+demo down until it comes back; while it restarts, Cloudflare shows its own error page. Many
+addresses at once can still fill the storage, which only restarts the demo.
+
 ## How the care-notes review works
 
 - **Two kinds of read.** The model reads the whole note once, and each sentence on its own. The

@@ -6,16 +6,31 @@ stored as JSON text. Every query passes its values as parameters, never in the S
 
 import json
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any
 
 MIGRATIONS = Path(__file__).parent / "migrations"
+# How long a write waits for another to finish before giving up (Python's default, stated).
+BUSY_SECONDS = 5.0
+# One write at a time in this process: every write holds this from its first change to its
+# commit. SQLite allows one writer, and a writer that finds its lock taken polls for it with no
+# queue, so under load some waited out the whole busy timeout; waiting here queues them instead
+# (one process serves the app). Reentrant, as the audit log's append runs inside a request's
+# write.
+WRITE = threading.RLock()
 
 
-def connect(path: Path) -> sqlite3.Connection:
-    connection = sqlite3.connect(path)
+def connect(path: Path, budget: int | None = None) -> sqlite3.Connection:
+    """A connection to the database at `path`. With a `budget` in bytes, a write that would grow
+    the file past it fails with SQLITE_FULL and its transaction is rolled back whole. The cap is
+    a setting of each connection (`max_page_count`), so every connection must be given it."""
+    connection = sqlite3.connect(path, timeout=BUSY_SECONDS)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    if budget is not None:
+        page_size = connection.execute("PRAGMA page_size").fetchone()[0]
+        connection.execute(f"PRAGMA max_page_count = {budget // page_size}")  # ints only
     return connection
 
 

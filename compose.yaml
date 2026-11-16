@@ -8,12 +8,17 @@ services:
     image: homecare:live
     restart: unless-stopped
     read_only: true
-    tmpfs: [/tmp]
+    # In memory and the same size as in the cluster; the demo's database stops at 40 MiB in it.
+    tmpfs: [/tmp:size=64m]
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     mem_limit: 512m
     cpus: 1
     networks: [inside]
+    logging: &logs
+      # Docker keeps every line by default; three files of 10 MB at most.
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
 
   tunnel:
     # cloudflared 2026.10.7, pinned by digest (checked 2026-11-12).
@@ -26,6 +31,7 @@ services:
     volumes:
       - ${CLOUDFLARED_DIR:-~/.cloudflared/homecare}:/etc/cloudflared:ro
     networks: [inside, outside]
+    logging: *logs
     depends_on:
       app:
         condition: service_healthy

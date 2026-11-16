@@ -149,6 +149,20 @@ def test_no_screen_shows_anything_from_inside_the_app(
     assert COMMIT[:12] in client.get("/healthz").text  # the build id is set, so a leak would show
     pages, opened = every_page(client, tmp_path)
     assert html_routes(client) - opened == set(), "screens this test never opens"
+    # The refusals that keep the app up: a form too long or unreadable, too many forms, and the
+    # pages for a slow form, a busy server and a demo restarting.
+    form = {"content-type": main.FORM_TYPE}
+    pages["form too long"] = client.post("/signin", content=b"a" * 70_000, headers=form).text
+    pages["form not readable"] = client.post("/signin", content=b"csrf=\xff", headers=form).text
+    monkeypatch.setattr(main, "SAVES_PER_WINDOW", 0)
+    pages["too many forms"] = client.post("/signin", data={"csrf": "x"}).text
+    problem = main.TEMPLATES.get_template("problem.html")
+    shown = [("form too slow", main.HTTP_ERRORS[408]), ("busy", main.BUSY),
+             ("restarting", main.RESTARTING)]  # fmt: skip
+    for name, (title, message) in shown:
+        pages[name] = problem.render(title=title, message=message, back="/", demo=True)
+    for name in ["form too long", "form not readable", "too many forms"]:
+        assert "Nothing was saved" in pages[name], name
     found = {name: leaks(visible(page)) for name, page in pages.items()}
     assert {name: words for name, words in found.items() if words} == {}
 
