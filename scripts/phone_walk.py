@@ -37,6 +37,7 @@ OFFICE_PAGES = [
     ("Sign in as the coordinator", "/rota", "09-rota"),
     ("Sign in as the coordinator", "/rota/replan", "10-replan"),
     ("Sign in as the coordinator", "/imports", "11-imports"),
+    ("Sign in as the coordinator", "/referrals/referral-1", "12-referral"),
 ]
 RESULTS: list[bool] = []
 

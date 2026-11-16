@@ -11,7 +11,12 @@
     homecare rota plan                      plan the demo week's rota
     homecare rota replan --carer K --at T  re-plan a demo day after a carer drops out
     homecare rota replan-sweep              measure the re-plan's time-move weight
+    homecare referrals write SET...         write and register synthetic referral sets
+    homecare referrals extract --model M SET...  read every referral of registered sets
+    homecare referrals read FILE --out DRAFT  a draft profile from one referral, to confirm
+    homecare referrals match DRAFT          the carers allowed on each visit of a confirmed draft
     homecare evaluate notes --model M SET...  score a run
+    homecare evaluate referrals --model M SET...  score a referral run, its gate and control
     homecare evaluate rank --model M --arm A SET...  the queue-ranking study (laptop only)
     homecare evaluate tamper SET...         the tamper-tag study (laptop only)
     homecare attack generate --model M      write and register the generated attacks
@@ -45,11 +50,15 @@ from homecare.app import main as app_main
 from homecare.app import seed as platform_seed
 from homecare.evaluation import attack, llmail, ranking, search, sets, tampering
 from homecare.evaluation import notes as notes_score
+from homecare.evaluation import referrals as referral_score
 from homecare.imports import sample as import_sample
 from homecare.imports import validate as import_validate
 from homecare.matching import baseline, check, sweep
 from homecare.notes import extract
-from homecare.world import agency, roads, writer
+from homecare.referrals import fields as referral_fields
+from homecare.referrals import match as referral_match
+from homecare.referrals import read as referral_read
+from homecare.world import agency, referral_writer, roads, writer
 
 DATA = Path("data")
 PORT = 8090
@@ -77,6 +86,8 @@ DEMO_ROTA = DATA / "rota" / "demo-week.json"
 # The rota data the app shows the coordinator: committed and pinned, like the seed.
 ROTA_APP = platform_seed.FILE.with_name("rota.json")
 DEMO_MODEL = "gemma-4-26b-a4b"  # the extraction the platform shows
+REFERRAL_MODEL = DEMO_MODEL  # the same reader for referrals
+CONTROL_SEED = 2611  # the shuffled-key control's order, fixed before any run
 RETENTION = DATA / "retention"
 MIN_PASSWORD = 15
 
@@ -653,6 +664,245 @@ def run_evaluate(model: str, names: list[str]) -> None:
         print(summary(report))
 
 
+def run_referrals_write(names: list[str]) -> None:
+    writers = {referral_writer.SETS[name]["writer"] for name in names}
+    if len(writers) != 1:
+        raise SystemExit("write sets that share one writer model in each call")
+    model = writers.pop()
+    for name in names:
+        if sets.read_registry(sets.REGISTRY)["sets"].get(name):
+            raise SystemExit(f"{name} is registered already; a new set needs a new name")
+    with models.served(model, PORT, DATA / "logs" / f"{model}.log") as url:
+        for name in names:
+            plan = referral_writer.SETS[name]
+            facts, topics = referral_writer.load(plan["pool"])
+            by_id = {fact["id"]: fact for fact in facts}
+            log = DATA / "logs" / f"{name}-write.jsonl"
+            log.unlink(missing_ok=True)
+            written = []
+            for spec in referral_writer.specs(name):
+                referral = referral_writer.write_referral(url, spec, by_id, topics, plan["perturb"])
+                append_jsonl(log, referral)
+                if referral["text"] is not None:
+                    pin = models.entry(model)["sha256"]
+                    written.append({**referral, "writer": model, "writer_sha256": pin})
+                print(
+                    name, spec["id"], "ok" if referral["text"] else referral["failed"], flush=True
+                )
+            folder = sets.ROOT / name
+            folder.mkdir(parents=True, exist_ok=True)
+            out = folder / "referrals.jsonl"
+            out.write_text("", encoding="utf-8")
+            for referral in written:
+                append_jsonl(out, referral)
+            description = f"{len(written)} synthetic referrals written by {model}"
+            sets.register(name, description, sets.ROOT, sets.REGISTRY)
+            print(f"{name}: {len(written)} referrals registered", flush=True)
+
+
+def referral_header(model: str) -> dict[str, str]:
+    return {
+        "model": model,
+        "sha256": models.entry(model)["sha256"],
+        "prompt": referral_read.PROMPT_HASH,
+        "pipeline": referral_read.PIPELINE,
+    }
+
+
+def referral_run_path(name: str, model: str, pipeline: str) -> Path:
+    return DATA / "runs" / name / f"{model}--{pipeline}.jsonl"
+
+
+def run_referrals_extract(model: str, names: list[str]) -> None:
+    """Read every referral of each set. Progress lines name claims only, never referral text."""
+    header = referral_header(model)
+    folders = {name: sets.require(name, sets.ROOT, sets.REGISTRY) for name in names}
+    with models.served(model, PORT, DATA / "logs" / f"{model}.log") as url:
+        for name in names:
+            out = referral_run_path(name, model, referral_read.PIPELINE)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            done = set()
+            if out.exists() and read_jsonl(out)[:1] == [{"header": header}]:
+                done = {r["id"] for r in read_jsonl(out)[1:]}
+            elif out.exists():
+                # A run made under another header is evidence; it is never overwritten.
+                raise SystemExit(f"{out} holds a run with another header; move it first")
+            else:
+                out.write_text(
+                    json.dumps({"header": header}, sort_keys=True) + "\n", encoding="utf-8"
+                )
+            cache: dict[str, Any] = {}
+            for referral in read_jsonl(folders[name] / "referrals.jsonl"):
+                if referral["id"] in done:
+                    continue
+                result = referral_read.read(url, referral["text"], cache)
+                append_jsonl(out, {"id": referral["id"], **result})
+                print(name, referral["id"], [c["claim"] for c in result["claims"]], flush=True)
+
+
+def referral_summary(name: str, report: dict[str, Any]) -> str:
+    lines = [f"{name} ({report['referrals']} referrals)"]
+    for claim in referral_fields.CLAIMS:
+        recall = shown(report["recall"][claim])
+        lines.append(f"  {claim:26} recall {recall}  precision {shown(report['precision'][claim])}")
+    for key in ("complete", "clean", "quote_drops", "true_claims_needing_whole_referral"):
+        lines.append(f"  {key:34} {shown(report[key])}")
+    lines.append(f"  corrections per referral {report['corrections_per_referral']}")
+    lines.append(f"  missed {len(report['missed'])}; false {len(report['false'])}")
+    lines.append(f"  errors {len(report['errors'])}")
+    return "\n".join(lines)
+
+
+def referral_runs(name: str, model: str, pipeline: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """A referral run's header, and its reads by referral."""
+    records = read_jsonl(referral_run_path(name, model, pipeline))
+    return records[0]["header"], {r["id"]: r for r in records[1:]}
+
+
+def shown_pair(pair: dict[str, Any]) -> str:
+    errors = f"errors {pair['errors_before']} -> {pair['errors_after']}"
+    return f"{errors}, fixed {pair['fixes']}, broke {pair['breaks']}, p {pair['p']:.4f}"
+
+
+def run_referrals_evaluate(
+    model: str, names: list[str], pipeline: str, compare: str | None
+) -> None:
+    """Score each run, apply the gate, and check that the shuffled-key control fails it. With
+    `compare`, also compare it with that pipeline's run on the same set, each scored with the
+    exact quote check alone, so only the readers differ."""
+    for name in names:
+        folder = sets.require(name, sets.ROOT, sets.REGISTRY)
+        referrals = read_jsonl(folder / "referrals.jsonl")
+        header, runs = referral_runs(name, model, pipeline)
+        report: dict[str, Any] = {"set": name, "header": header}
+        report |= referral_score.score(referrals, runs)
+        report["gate_failures"] = referral_score.gate(report)
+        control = referral_score.score(referral_score.shuffled(referrals, CONTROL_SEED), runs)
+        report["control"] = {"report": control, "gate_failures": referral_score.gate(control)}
+        unchecked = referral_score.score(referrals, referral_score.with_dropped(runs))
+        report["without_quote_check"] = unchecked
+        exact = referral_score.score(referrals, referral_score.exact_only(runs))
+        report["exact_quotes_only"] = exact | {"gate_failures": referral_score.gate(exact)}
+        report["spelling_matches"] = referral_score.spelling_matches(referrals, runs)
+        if WORLD.exists():
+            carers = json.loads(WORLD.read_text(encoding="utf-8"))["carers"]
+            report["matching_agreement"] = referral_score.matching_agreement(
+                referrals, runs, carers
+            )
+            report["harmful_visits"] = referral_score.harmful_visits(referrals, runs, carers)
+        if compare:
+            _, before = referral_runs(name, model, compare)
+            before_exact = referral_score.exact_only(before)
+            after_exact = referral_score.exact_only(runs)
+            earlier = referral_score.score(referrals, before_exact)
+            report["paired"] = {
+                "against": compare,
+                "targeted": referral_score.paired(
+                    referrals, before_exact, after_exact, referral_score.TARGETED
+                ),
+                "all": referral_score.paired(
+                    referrals, before_exact, after_exact, referral_fields.CLAIMS
+                ),
+                "against_gate_failures": referral_score.gate(earlier),
+                "against_false": len(earlier["false"]),
+                "false": len(exact["false"]),
+            }
+        out = DATA / "reports" / f"{name}--{model}--{pipeline}.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(report, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(referral_summary(name, report))
+        print("  gate:", "; ".join(report["gate_failures"]) or "passed")
+        failed = len(report["control"]["gate_failures"])
+        print(f"  control (shuffled keys): {failed} gate failures; it must fail")
+        print(f"  without the quote check: {referral_summary(name, unchecked)}")
+        exact_gate = "; ".join(report["exact_quotes_only"]["gate_failures"]) or "passed"
+        print(f"  exact quotes only, gate: {exact_gate}")
+        print(f"  claims only the spelling match found: {len(report['spelling_matches'])}")
+        if "matching_agreement" in report:
+            print(f"  matching agreement {shown(report['matching_agreement'])}")
+            print(f"  harmful visits {shown(report['harmful_visits'])}")
+        if compare:
+            pair = report["paired"]
+            print(f"  against {compare}, targeted claims: {shown_pair(pair['targeted'])}")
+            print(f"  against {compare}, all claims: {shown_pair(pair['all'])}")
+            print(f"  false claims {pair['against_false']} -> {pair['false']}")
+            earlier_gate = "; ".join(pair["against_gate_failures"]) or "passed"
+            print(f"  {compare} gate (exact quotes): {earlier_gate}")
+
+
+def run_referrals_read(file: Path, out: Path, model: str) -> None:
+    """A draft profile for a person to confirm. The quotes go to the draft file only."""
+    text = file.read_text(encoding="utf-8")
+    with models.served(model, PORT, DATA / "logs" / f"{model}.log") as url:
+        result = referral_read.read(url, text)
+    draft = referral_read.draft(result)
+    draft["header"] = referral_header(model)
+    draft["referral_sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    out.write_text(json.dumps(draft, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"{out}: {len(draft['claims'])} claims, {len(draft['dropped'])} dropped")
+    print("  conflicts:", ", ".join(draft["conflicts"]) or "none")
+    print("  not stated, ask the referrer:", ", ".join(draft["not_found"]) or "none")
+    print("  check every claim against its quote, correct the profile, then set confirmed_by")
+    if "error" in result:
+        print("  failed reads:", "; ".join(result["error"]))
+
+
+def run_referrals_demo() -> None:
+    """The app's SYNTHETIC demo referrals: written from the demo specs, read once by the
+    referral model, then committed with a pin. One model server at a time."""
+    plan = referral_writer.DEMO
+    facts, topics = referral_writer.load(plan["pool"])
+    by_id = {fact["id"]: fact for fact in facts}
+    writer_model = plan["writer"]
+    written = []
+    with models.served(writer_model, PORT, DATA / "logs" / f"{writer_model}.log") as url:
+        for spec in referral_writer.specs("referrals-demo", plan):
+            referral = referral_writer.write_referral(url, spec, by_id, topics, plan["perturb"])
+            print(spec["id"], "ok" if referral["text"] else referral["failed"], flush=True)
+            if referral["text"] is not None:
+                name = f"{spec['title']} {spec['first_name']} {spec['surname']}"
+                written.append({"id": spec["id"], "name": name, "text": referral["text"]})
+    reads = {}
+    with models.served(REFERRAL_MODEL, PORT, DATA / "logs" / f"{REFERRAL_MODEL}.log") as url:
+        for referral in written:
+            result = referral_read.read(url, referral["text"])
+            if "error" in result:
+                raise SystemExit(f"{referral['id']}: a read failed, so nothing was written")
+            reads[referral["id"]] = result
+            print(referral["id"], [claim["claim"] for claim in result["claims"]], flush=True)
+    writer_header = {"model": writer_model, "sha256": models.entry(writer_model)["sha256"]}
+    data = platform_seed.build_referrals(
+        written, reads, writer_header, referral_header(REFERRAL_MODEL)
+    )
+    text = platform_seed.dumps(data)
+    platform_seed.REFERRALS.write_text(text, encoding="utf-8", newline="\n")
+    platform_seed.REFERRALS.with_name("referrals.json.sha256").write_text(
+        platform_seed.sha256(text) + "\n", encoding="utf-8", newline="\n"
+    )
+    print(f"{len(written)} of {plan['count']} demo referrals written, read and pinned")
+
+
+def run_referrals_match(file: Path) -> None:
+    draft = json.loads(file.read_text(encoding="utf-8"))
+    refused = referral_match.refusals(draft)
+    if refused:
+        raise SystemExit("cannot match: " + "; ".join(refused))
+    if not WORLD.exists():
+        raise SystemExit(f"{WORLD} is missing: run `homecare world build` first")
+    carers = json.loads(WORLD.read_text(encoding="utf-8"))["carers"]
+    print(f"confirmed by {draft['confirmed_by']}; carers from the SYNTHETIC demo agency")
+    for visit in referral_match.visits(draft["profile"], carers):
+        window = f"{screens.clock(visit['open'])}-{screens.clock(visit['close'])}"
+        rules = [f"skills: {', '.join(visit['skills']) or 'none'}"]
+        if visit["gender"]:
+            rules.append(f"{visit['gender']} carers only")
+        if visit["two_carers"]:
+            rules.append("two carers (pairing is not built)")
+        able = ", ".join(visit["carers"]) or "none"
+        print(f"  {visit['slot']:8} {window}  {'; '.join(rules)}")
+        print(f"           {len(visit['carers'])} may go: {able}")
+
+
 def attack_score(notes: list[dict[str, Any]], runs: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """Notes whose concern band the clean note found but an attacked copy lost."""
     succeeded = []
@@ -1008,6 +1258,27 @@ def main(argv: list[str] | None = None) -> None:
     evaluate_rank.add_argument("sets", nargs="+")
     evaluate_tamper = evaluate.add_parser("tamper", help="the tamper-tag study (laptop only)")
     evaluate_tamper.add_argument("sets", nargs="+")
+    evaluate_referrals = evaluate.add_parser("referrals", help="score referral reads")
+    evaluate_referrals.add_argument("--model", required=True)
+    evaluate_referrals.add_argument("--pipeline", default=referral_read.PIPELINE)
+    evaluate_referrals.add_argument("--compare", help="another pipeline's run to compare with")
+    evaluate_referrals.add_argument("sets", nargs="+")
+    referrals = commands.add_parser("referrals", help="read referrals into client profiles")
+    referral_actions = referrals.add_subparsers(dest="action", required=True)
+    referral_actions.add_parser("write").add_argument(
+        "sets", nargs="+", choices=list(referral_writer.SETS)
+    )
+    referral_extract = referral_actions.add_parser("extract")
+    referral_extract.add_argument("--model", required=True)
+    referral_extract.add_argument("sets", nargs="+")
+    referral_read_command = referral_actions.add_parser("read", help="draft one referral")
+    referral_read_command.add_argument("file", type=Path)
+    referral_read_command.add_argument("--out", required=True, type=Path)
+    referral_read_command.add_argument("--model", default=REFERRAL_MODEL)
+    referral_actions.add_parser("match", help="match a confirmed draft").add_argument(
+        "draft", type=Path
+    )
+    referral_actions.add_parser("demo", help="write, read and pin the app's demo referrals")
     attacks = commands.add_parser("attack", help="make attacks for the v2 attack test")
     attack_commands = attacks.add_subparsers(dest="action", required=True)
     attack_commands.add_parser("generate").add_argument("--model", required=True)
@@ -1089,6 +1360,16 @@ def main(argv: list[str] | None = None) -> None:
         run_demo_notes()
     elif args.command == "notes":
         run_extract(args.model, args.sets)
+    elif args.command == "referrals" and args.action == "write":
+        run_referrals_write(args.sets)
+    elif args.command == "referrals" and args.action == "extract":
+        run_referrals_extract(args.model, args.sets)
+    elif args.command == "referrals" and args.action == "read":
+        run_referrals_read(args.file, args.out, args.model)
+    elif args.command == "referrals" and args.action == "demo":
+        run_referrals_demo()
+    elif args.command == "referrals":
+        run_referrals_match(args.draft)
     elif args.command == "attack" and args.action == "generate":
         run_generate(args.model)
     elif args.command == "attack" and args.action == "llmail":
@@ -1132,5 +1413,7 @@ def main(argv: list[str] | None = None) -> None:
         run_rank(args.model, args.arm, args.sets)
     elif args.action == "tamper":
         run_tamper(args.sets)
+    elif args.action == "referrals":
+        run_referrals_evaluate(args.model, args.sets, args.pipeline, args.compare)
     else:
         run_evaluate(args.model, args.sets)

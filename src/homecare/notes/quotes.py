@@ -94,3 +94,61 @@ def find_quote(quote: str, text: str) -> str | None:
     """The text's own wording of `quote`, or None if the text does not contain it."""
     span = locate(quote, text)
     return None if span is None else text[span[0] : span[1]]
+
+
+# The spelling-tolerant match, for a quote whose model silently corrected a typo or joined two
+# list lines. It is stricter than fuzzy alignment (Google's LangExtract accepts a span when 75%
+# of the quote's tokens match): every word must be there, in order, with nothing skipped.
+WORD_TOKEN = re.compile(r"[^\W_]+")
+LOOSE_MIN_LETTERS = 5  # shorter words carry meaning in one letter: "not", "now", "need", "feed"
+WORDS_PER_LOOSE = 4  # at most one loosely matched word in every four quoted words
+
+
+def one_edit_apart(a: str, b: str) -> bool:
+    """Whether `b` is `a` with one letter changed, added or dropped, or two neighbours swapped."""
+    if abs(len(a) - len(b)) > 1:
+        return False
+    first = 0
+    while first < min(len(a), len(b)) and a[first] == b[first]:
+        first += 1
+    if len(a) == len(b):
+        changed = a[first + 1 :] == b[first + 1 :]
+        swapped = a[first : first + 2] == b[first : first + 2][::-1]
+        return changed or (swapped and a[first + 2 :] == b[first + 2 :])
+    longer, shorter = (a, b) if len(a) > len(b) else (b, a)
+    return longer[first + 1 :] == shorter[first:]
+
+
+def loosely_equal(wanted: str, got: str) -> bool:
+    """Whether two different words may count as one: letters only, both long, one edit apart."""
+    long_enough = min(len(wanted), len(got)) >= LOOSE_MIN_LETTERS
+    letters = wanted.isalpha() and got.isalpha()
+    return long_enough and letters and one_edit_apart(wanted, got)
+
+
+def find_close_quote(quote: str, text: str) -> str | None:
+    """The text's own wording of `quote` when the text holds the same words in the same order,
+    side by side, with spacing, punctuation and list markers between them ignored, and at most
+    one word in four spelled one edit differently (words of five or more letters only; numbers
+    and shorter words must be exact). None otherwise. Use it only after `find_quote` fails, and
+    mark what it finds: it is evidence a person should read, not proof of the exact words."""
+    wanted = [word.lower() for word in WORD_TOKEN.findall(folded(quote)[0])]
+    if not wanted:
+        return None
+    allowed = len(wanted) // WORDS_PER_LOOSE
+    text_folded, where = folded(text)
+    words = list(WORD_TOKEN.finditer(text_folded))
+    lowered = [word.group().lower() for word in words]
+    for start in range(len(words) - len(wanted) + 1):
+        loose = 0
+        for offset, word in enumerate(wanted):
+            got = lowered[start + offset]
+            if got == word:
+                continue
+            if not loosely_equal(word, got) or loose == allowed:
+                break
+            loose += 1
+        else:
+            first, last = words[start], words[start + len(wanted) - 1]
+            return text[where[first.start()] : where[last.end() - 1] + 1]
+    return None

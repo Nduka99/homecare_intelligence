@@ -1,0 +1,17 @@
+{# The referrals as rows, one link each. Used on its own page and beside an open referral on wide
+   screens; `current` marks the open referral. #}
+{% from "marks.html" import tick, icon %}
+<ol class="list">
+  {% for row in referrals %}
+  <li>
+    <a class="row plain" href="/referrals/{{ row.id }}"{% if row.id == current %} aria-current="page"{% endif %}>
+      <span class="row-main">
+        <span class="row-title">{{ row.name }}</span>
+        <span class="row-meta">{{ row.claims }} {{ "claim" if row.claims == 1 else "claims" }} read · {{ row.to_ask }} to ask the referrer</span>
+        <span class="row-tags">{% if row.confirmed %}<span class="tag done">{{ tick() }}Confirmed</span>{% else %}<span class="tag">To confirm</span>{% endif %}{% if row.conflict and not row.confirmed %} <span class="tag visit">Conflict</span>{% endif %}</span>
+      </span>
+      <span class="chevron">{{ icon("chevron") }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ol>

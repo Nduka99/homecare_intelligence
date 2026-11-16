@@ -1,0 +1,346 @@
+{
+ "about": "SYNTHETIC demo referrals: no real person, client, referrer or provider.",
+ "reader": {
+  "model": "gemma-4-26b-a4b",
+  "pipeline": "referrals-v3",
+  "prompt": "c47d16e3c85c685a9069e3f3fd7bf79ca8f2e7c877c2e85f6cc449a9498c517f",
+  "sha256": "453cf049ba87a29b9ed5739087b84b7fa0265a4f2b11eefa2c77683dec6a8020"
+ },
+ "referrals": [
+  {
+   "claims": [
+    {
+     "claim": "need: medication",
+     "match": "exact",
+     "quote": "Carers required to administer medication as prescribed.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: morning",
+     "match": "exact",
+     "quote": "Request four calls a day: morning, lunch, teatime and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: lunch",
+     "match": "exact",
+     "quote": "Request four calls a day: morning, lunch, teatime and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: tea",
+     "match": "exact",
+     "quote": "Request four calls a day: morning, lunch, teatime and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: bed",
+     "match": "exact",
+     "quote": "Request four calls a day: morning, lunch, teatime and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "carer gender: female",
+     "match": "exact",
+     "quote": "Patient specifically requested female carers only for personal care.",
+     "read": "both"
+    },
+    {
+     "claim": "time-critical medicine",
+     "match": "exact",
+     "quote": "Parkinson's medication is time-critical and must be given at 8am, within 30 minutes.",
+     "read": "both"
+    },
+    {
+     "claim": "insulin by carers",
+     "match": "exact",
+     "quote": "District Nurse has delegated morning insulin injection to agency; carers to be trained.",
+     "read": "both"
+    },
+    {
+     "claim": "need: personal care",
+     "match": "exact",
+     "quote": "Support required with personal care, including a strip wash and continence pads.",
+     "read": "both"
+    }
+   ],
+   "dropped": [],
+   "id": "referral-1",
+   "name": "Mr Patrick Turner",
+   "text": "Home Care Referral: Mr Patrick Turner, 71. Discharge from hospital following a fall at home. Daughter resides with patient. District Nurse has delegated morning insulin injection to agency; carers to be trained. Parkinson's medication is time-critical and must be given at 8am, within 30 minutes. Carers required to administer medication as prescribed. Patient walks with a frame and does not require a hoist. Request four calls a day: morning, lunch, teatime and bedtime. Patient specifically requested female carers only for personal care. Support required with personal care, including a strip wash and continence pads."
+  },
+  {
+   "claims": [
+    {
+     "claim": "need: end of life",
+     "match": "exact",
+     "quote": "is being referred for end of life care.",
+     "read": "both"
+    },
+    {
+     "claim": "insulin by carers",
+     "match": "exact",
+     "quote": "The district nurse has delegated her morning insulin injection to the agency",
+     "read": "both"
+    },
+    {
+     "claim": "need: personal care",
+     "match": "exact",
+     "quote": "Carers must support her with personal care, including a strip wash and continence pads.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: morning",
+     "match": "exact",
+     "quote": "Two calls are requested per day: one in the morning",
+     "read": "both"
+    },
+    {
+     "claim": "visit: bed",
+     "match": "exact",
+     "quote": "and one at bedtime.",
+     "read": "both"
+    }
+   ],
+   "dropped": [],
+   "id": "referral-2",
+   "name": "Mrs Pauline Ahmed",
+   "text": "Mrs Pauline Ahmed, aged 70, is being discharged from hospital following a fall at home and is being referred for end of life care. She walks with a frame and does not require a hoist. The district nurse has delegated her morning insulin injection to the agency, and carers will be trained to administer it. Carers must support her with personal care, including a strip wash and continence pads. Two calls are requested per day: one in the morning and one at bedtime. A neighbour visits at teatime most days. Mrs Ahmed is happy to have male or female carers."
+  },
+  {
+   "claims": [
+    {
+     "claim": "need: medication",
+     "match": "exact",
+     "quote": "administration of her epilepsy medicine on time in the morning and to hand out tablets from her pharmacy blister pack",
+     "read": "both"
+    },
+    {
+     "claim": "need: personal care",
+     "match": "exact",
+     "quote": "She requires support with personal care, including a strip wash and continence pads",
+     "read": "both"
+    },
+    {
+     "claim": "visit: morning",
+     "match": "exact",
+     "quote": "three calls a day",
+     "read": "both"
+    },
+    {
+     "claim": "visit: lunch",
+     "match": "exact",
+     "quote": "three calls a day",
+     "read": "both"
+    },
+    {
+     "claim": "visit: bed",
+     "match": "exact",
+     "quote": "three calls a day",
+     "read": "both"
+    },
+    {
+     "claim": "carer gender: female",
+     "match": "exact",
+     "quote": "will accept women carers only for washing",
+     "read": "both"
+    },
+    {
+     "claim": "time-critical medicine",
+     "match": "exact",
+     "quote": "administration of her epilepsy medicine on time in the morning",
+     "read": "both"
+    },
+    {
+     "claim": "insulin by carers",
+     "match": "exact",
+     "quote": "The District Nurse has delegated a morning insulin injection to the agency",
+     "read": "both"
+    }
+   ],
+   "dropped": [],
+   "id": "referral-3",
+   "name": "Mrs Irene Singh",
+   "text": "Referral for Mrs Irene Singh, 75, to be discharged home following a fall. She lives with her daughter. The District Nurse has delegated a morning insulin injection to the agency; carers will be trained to administer this. She requires support with personal care, including a strip wash and continence pads, and will accept women carers only for washing. She needs three calls a day for administration of her epilepsy medicine on time in the morning and to hand out tablets from her pharmacy blister pack at lunch and bedtime."
+  },
+  {
+   "claims": [
+    {
+     "claim": "need: learning disability",
+     "match": "exact",
+     "quote": "Mr Rahman is autistic",
+     "read": "both"
+    },
+    {
+     "claim": "insulin by carers",
+     "match": "exact",
+     "quote": "Carers are required to give him his insulin each morning",
+     "read": "both"
+    },
+    {
+     "claim": "visit: morning",
+     "match": "exact",
+     "quote": "Three calls a day are requested: morning, lunch and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "time-critical medicine",
+     "match": "exact",
+     "quote": "The Parkinson's medication is time-critical and must be given at 8am, within 30 minutes.",
+     "read": "both"
+    },
+    {
+     "claim": "need: medication",
+     "match": "exact",
+     "quote": "Carers are to give his tablets from the pharmacy blister pack.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: lunch",
+     "match": "exact",
+     "quote": "Three calls a day are requested: morning, lunch and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: bed",
+     "match": "exact",
+     "quote": "Three calls a day are requested: morning, lunch and bedtime.",
+     "read": "both"
+    }
+   ],
+   "dropped": [],
+   "id": "referral-4",
+   "name": "Mr Arjun Rahman",
+   "text": "Referral for Mr Arjun Rahman, aged 32. He has been discharged from hospital following a fall at home. He lives with his daughter. Mr Rahman is autistic and finds changes to his routine very hard. Carers are required to give him his insulin each morning, as he can no longer manage the pen. The Parkinson's medication is time-critical and must be given at 8am, within 30 minutes. Carers are to give his tablets from the pharmacy blister pack. Three calls a day are requested: morning, lunch and bedtime."
+  },
+  {
+   "claims": [
+    {
+     "claim": "need: medication",
+     "match": "exact",
+     "quote": "Carers are required to administer medication as prescribed",
+     "read": "both"
+    },
+    {
+     "claim": "need: personal care",
+     "match": "exact",
+     "quote": "provide support with personal care, including a strip wash and continence pads",
+     "read": "both"
+    },
+    {
+     "claim": "insulin by carers",
+     "match": "exact",
+     "quote": "Carers must also administer insulin in the morning",
+     "read": "both"
+    },
+    {
+     "claim": "visit: morning",
+     "match": "exact",
+     "quote": "Mrs Ali requires calls at breakfast",
+     "read": "both"
+    },
+    {
+     "claim": "visit: lunch",
+     "match": "exact",
+     "quote": "lunch",
+     "read": "both"
+    },
+    {
+     "claim": "visit: tea",
+     "match": "exact",
+     "quote": "teatime",
+     "read": "both"
+    },
+    {
+     "claim": "visit: bed",
+     "match": "exact",
+     "quote": "bedtime",
+     "read": "both"
+    },
+    {
+     "claim": "carer gender: male",
+     "match": "exact",
+     "quote": "only men are to assist with personal care",
+     "read": "both"
+    }
+   ],
+   "dropped": [],
+   "id": "referral-5",
+   "name": "Mrs Hilda Ali",
+   "text": "Referral for Mrs Hilda Ali, 91, discharged from hospital following a fall, living alone. The patient has no memory concerns. Carers are required to administer medication as prescribed and provide support with personal care, including a strip wash and continence pads. Carers must also administer insulin in the morning, as Mrs Ali can no longer manage the pen. Mrs Ali requires calls at breakfast, lunch, teatime and bedtime and has specified that only men are to assist with personal care."
+  },
+  {
+   "claims": [
+    {
+     "claim": "need: personal care",
+     "match": "exact",
+     "quote": "Requires support with personal care, including a strip wash and continence pads.",
+     "read": "both"
+    },
+    {
+     "claim": "need: medication",
+     "match": "exact",
+     "quote": "Needs carers to administer medication as prescribed.",
+     "read": "both"
+    },
+    {
+     "claim": "need: dementia",
+     "match": "exact",
+     "quote": "She lives with vascular dementia",
+     "read": "both"
+    },
+    {
+     "claim": "visit: morning",
+     "match": "exact",
+     "quote": "Four calls a day are required: morning, lunch, teatime and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: lunch",
+     "match": "exact",
+     "quote": "Four calls a day are required: morning, lunch, teatime and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: tea",
+     "match": "exact",
+     "quote": "Four calls a day are required: morning, lunch, teatime and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "visit: bed",
+     "match": "exact",
+     "quote": "Four calls a day are required: morning, lunch, teatime and bedtime.",
+     "read": "both"
+    },
+    {
+     "claim": "carer gender: male",
+     "match": "exact",
+     "quote": "Mrs Walsh would like male carers only for personal care.",
+     "read": "both"
+    },
+    {
+     "claim": "time-critical medicine",
+     "match": "exact",
+     "quote": "Her Parkinson's medication is time-critical and must be given at 8am, within 30 minutes.",
+     "read": "both"
+    },
+    {
+     "claim": "two carers with a hoist",
+     "match": "exact",
+     "quote": "She needs a double-up call with a ceiling hoist for transfers.",
+     "read": "both"
+    }
+   ],
+   "dropped": [],
+   "id": "referral-6",
+   "name": "Mrs Pauline Walsh",
+   "text": "Referral for Mrs Pauline Walsh, 65, living alone. Discharged after a fall. Requires support with personal care, including a strip wash and continence pads. Needs carers to administer medication as prescribed. She lives with vascular dementia and becomes distressed by unfamiliar faces. Her Parkinson's medication is time-critical and must be given at 8am, within 30 minutes. Mrs Walsh would like male carers only for personal care. The district nurse visits each morning to give her insulin. She needs a double-up call with a ceiling hoist for transfers. Four calls a day are required: morning, lunch, teatime and bedtime."
+  }
+ ],
+ "synthetic": true,
+ "writer": {
+  "model": "glm-4.7-flash",
+  "sha256": "b0d4fbc1211f891b4cfbf2a497160bfe06a49412420068904d426b7a13f4ba7f"
+ }
+}

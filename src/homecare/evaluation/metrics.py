@@ -20,3 +20,16 @@ def proportion(found: int, total: int) -> dict[str, float | int]:
     low, high = wilson(found, total)
     rate = found / total if total else 0.0
     return {"found": found, "total": total, "rate": rate, "low": low, "high": high}
+
+
+def mcnemar_exact(fixes: int, breaks: int) -> float:
+    """The two-sided exact McNemar p-value for two runs over the same items: how likely a split of
+    the items they disagree on (one right, the other wrong) at least this uneven would be if
+    neither run were better. It is a binomial test at one half on those items alone."""
+    disagreements = fixes + breaks
+    if disagreements == 0:
+        return 1.0
+    smaller = min(fixes, breaks)
+    splits = sum(math.comb(disagreements, k) for k in range(smaller + 1))
+    tail = splits * 0.5**disagreements
+    return min(1.0, 2 * tail)

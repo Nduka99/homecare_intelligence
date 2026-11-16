@@ -13,6 +13,7 @@ changing a URL.
 
 import datetime
 import hashlib
+import json
 import mimetypes
 import os
 import re
@@ -59,10 +60,18 @@ HOME = {"lead": "/queue", "carer": "/today", "manager": "/team", "coordinator": 
 # The rota data the coordinator sees: the week's uncovered visits with the planner's reasons,
 # and a saved, checked re-plan (`homecare rota replan`). Pinned like the seed.
 ROTA = seed.FILE.with_name("rota.json")
+# The coordinator's demo referrals, each with the laptop model's read (`homecare referrals demo`).
+REFERRALS = seed.REFERRALS
 VISITOR = "__Host-visitor"
 # A Send's idempotency key: a version 4 UUID, made by the server or the carer's phone.
 KEY = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 LONGEST_NOTE = 4000
+REFUSED_PROFILE = {
+    "no visit": "Not saved: choose at least one visit. If the referral gives none, ask the "
+    "referrer.",
+    "not asked": "Not saved: options the referral does not state would be saved as not needed. "
+    "Ask the referrer, then tick “I have asked the referrer”.",
+}
 SIGNIN_MESSAGES = {
     "wrong": "Wrong username or password.",
     "locked": "This account is locked for 15 minutes after five failed sign-ins.",
@@ -157,6 +166,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         settings["anchor"].unlink(missing_ok=True)
     demo_week = seed.load()
     rota_data = seed.load(ROTA, ROTA.with_name("rota.json.sha256"))
+    referral_data = seed.load(REFERRALS, REFERRALS.with_name("referrals.json.sha256"))
     road_map = maps.load()
     plan = {visit["id"]: visit for visit in demo_week["visits"]}
     junctions = {client["id"]: client["node"] for client in demo_week["clients"]}
@@ -166,6 +176,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
     if demo:
         add_demo_users(path)
     connection = db.connect(path)
+    db.load_referrals(connection, referral_data)
     found = auditlog.problems(connection, settings["key"], settings["anchor"])
     connection.close()
     if found:
@@ -705,6 +716,110 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 "report": screens.import_report(connection),
             }
             return page(request, "imports.html", context)
+        finally:
+            connection.close()
+
+    def no_referral(request: Request) -> HTMLResponse:
+        message = "This referral does not exist."
+        return problem(request, 404, "No such referral", message, "/referrals")
+
+    @app.get("/referrals", response_class=HTMLResponse)
+    def referrals(request: Request) -> Response:
+        connection = db.connect(path)
+        try:
+            found = signed_in(request, connection, ("coordinator",))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            log(connection, {"event": "view referrals", "user": user["id"]})
+            context = {
+                "user": user["id"],
+                "csrf": session["csrf"],
+                "referrals": screens.referral_list(connection, visitor_of(request)),
+            }
+            return page(request, "referrals.html", context)
+        finally:
+            connection.close()
+
+    def referral_page(
+        request: Request, connection: Any, session: dict[str, Any], user: Any, referral_id: str,
+        posted: dict[str, Any] | None = None, message: str = "",
+    ) -> HTMLResponse | None:  # fmt: skip
+        """A referral's page, or None if there is no such referral. Matching uses the demo
+        agency's carers and only a profile a person has confirmed."""
+        visitor = visitor_of(request)
+        detail = screens.referral_detail(
+            connection, referral_id, visitor, demo_week["carers"], posted
+        )
+        if detail is None:
+            return None
+        context = {
+            "user": user["id"],
+            "csrf": session["csrf"],
+            "referral": detail,
+            "referrals": screens.referral_list(connection, visitor),
+            "reader": referral_data["reader"],
+            "message": message,
+        }
+        return page(request, "referral.html", context)
+
+    @app.get("/referrals/{referral_id}", response_class=HTMLResponse)
+    def referral(request: Request, referral_id: str) -> Response:
+        connection = db.connect(path)
+        try:
+            found = signed_in(request, connection, ("coordinator",))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            response = referral_page(request, connection, session, user, referral_id)
+            if response is None:
+                return no_referral(request)
+            log(connection, {"event": "view referral", "user": user["id"], "referral": referral_id})
+            return response
+        finally:
+            connection.close()
+
+    @app.post("/referrals/{referral_id}/decisions")
+    def confirm_referral(request: Request, referral_id: str, fields: FormFields) -> Response:
+        """Store the profile a coordinator confirmed. Who confirmed it comes from the session,
+        never the form, and the profile only from the form's known fields and values."""
+        connection = db.connect(path)
+        try:
+            found = signed_in(request, connection, ("coordinator",))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            back = f"/referrals/{referral_id}"
+            if not auth.csrf_ok(session, fields.get("csrf", "")):
+                return expired(request, back)
+            known = connection.execute(
+                "SELECT claims FROM referrals WHERE id = ?", (referral_id,)
+            ).fetchone()
+            if known is None:
+                return no_referral(request)
+            read = [claim["claim"] for claim in json.loads(known["claims"])]
+            profile, why = screens.profile_from_form(fields, read)
+            if profile is None:
+                message = "The form held a choice this page never offers. Nothing was saved."
+                return problem(request, 400, "This form could not be saved", message, back)
+            if why:
+                message = REFUSED_PROFILE[why]
+                response = referral_page(request, connection, session, user, referral_id, profile,
+                                         message)  # fmt: skip
+                if response is None:
+                    return no_referral(request)
+                response.status_code = 400
+                return response
+            cursor = connection.execute(
+                "INSERT INTO referral_decisions (referral, profile, decided_by, visitor, decided) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (referral_id, json.dumps(profile, sort_keys=True), user["id"],
+                 visitor_of(request), time.time()),
+            )  # fmt: skip
+            log(connection, {"event": "confirm referral", "user": user["id"],
+                             "referral": referral_id, "decision": cursor.lastrowid})  # fmt: skip
+            connection.commit()
+            return to(f"{back}#who")
         finally:
             connection.close()
 

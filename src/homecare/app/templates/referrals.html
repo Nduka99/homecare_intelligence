@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "marks.html" import coordinator_nav %}
+{% block title %}Referrals{% endblock %}
+{% block page_class %} wide{% endblock %}
+{% block main %}
+<div class="page-head">
+  {{ coordinator_nav("referrals") }}
+  <h1>Referrals</h1>
+  <p class="sub">Coordinator · {{ referrals | length }} new clients · {{ referrals | selectattr("confirmed") | list | length }} confirmed</p>
+</div>
+<p class="lead-in">The model on the laptop read each referral into a draft profile, quoting the words behind every claim. Open one, check each claim against its quote, correct the profile and confirm it. Only a confirmed profile is matched to carers.</p>
+<h2 class="section-title" id="list-title">New referrals</h2>
+{% set current = None %}
+{% include "referral_list.html" %}
+{% endblock %}

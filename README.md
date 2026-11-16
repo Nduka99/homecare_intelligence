@@ -35,6 +35,9 @@ inspectors' own scores.
    guessing; a usable row that needs a look is flagged.
 6. **FHIR export (built).** Writes one client's record in FHIR R4, the health-records standard,
    for another system to read. Only what people recorded is exported (see below).
+7. **Referral reader (built, command line).** Reads a free-text referral for a new client into the
+   profile the visit planning uses, each item with the words it rests on. A person confirms the
+   profile before any carer is matched (see below).
 
 <p>
   <img src="screenshots/carer-day.png" width="240" alt="A carer's day on a phone: the visit to write up, the next visit and when to leave">
@@ -198,6 +201,91 @@ SIGN_IN=accounts AUDIT_KEY=<64 hex characters> uv run homecare fhir export --cli
   rota's plan: in the synthetic agency visits happen as planned, and imported check-in times are
   not used.
 
+## Read a referral into a client profile
+
+A referral is the message an agency receives about a new client, from a hospital, a social worker
+or a family. `homecare referrals read` has the local model read one, and writes a draft profile in
+the fields the visit planner uses:
+- the care needs: personal care, medication, dementia, learning disability, end of life;
+- the visits each day: morning, lunch, tea, bed;
+- a preference for female or male carers for personal care;
+- three hard rules: a medicine given at a set time, insulin given by carers, and two carers with
+  a hoist.
+
+```
+uv run homecare referrals read src/homecare/referrals/sample-referral.txt --out draft.json
+uv run homecare referrals match draft.json
+```
+
+- **Every claim quotes the referral.** Code checks that the quoted words are in the referral. A
+  claim whose quote is not there is dropped and listed, never repaired.
+- **Read twice.** The model reads the whole referral, and each sentence alone, and code joins the
+  two. So words elsewhere in a referral cannot remove a claim drawn from one sentence. The join
+  favours finding every need: a missed need could send a carer without the training, while an
+  extra one only narrows the carers offered.
+- **A person decides.** The draft shows each claim with its quote, any conflict (both genders),
+  and every rule the referral never mentions, as "not stated, ask the referrer".
+  `homecare referrals match` refuses a draft until a person has checked it and written their name
+  in `confirmed_by`. It then lists each visit's rules, and the synthetic agency's carers who may
+  go, using the planner's own rules unchanged.
+- **How it was tested.**
+  - Synthetic referrals were written from profiles drawn at random, by models of three other
+    families. The profile is the answer key, and the reader never sees it.
+  - Code rejects a written referral that lost a fact, or that mentions a need its profile lacks.
+  - About a third of the absent items get a sentence that mentions them without stating them
+    ("her brother has dementia", "no hoist needed").
+  - A development set of 148 referrals (GLM-4.7-Flash) was used to build the reader.
+  - Each change was then tested once on a set the reader had never seen, written by another
+    model family in other styles, with typing errors.
+  - The pass mark was fixed before any run. Each item must be found in at least 95% of the
+    referrals that state it (recall), and be right in at least 85% of the referrals it is claimed
+    for (precision).
+  - A control scores the same reads against shuffled answer keys, and must fail.
+  - A change is kept only if it fixes more errors than it causes on the same referrals (an exact
+    McNemar test, p < 0.05), adds no more than 10 false claims, and makes no passing item fail.
+- **How it got here.**
+  - The first reader missed visits asked for as "breakfast" calls, as a count ("QDS", "four
+    calls a day") or in short lists of clock times. It also missed insulin "delegated by the DN
+    team" (the district nurses).
+  - The reader now defines each visit by its place in the day, its time window and the usual
+    call names, says the day has exactly four visits, and says a task a nurse delegates to the
+    carers is the carers' task.
+  - On the latest set (196 referrals by Nemotron 3.5 Lightning, rules fixed first), this fixed 75
+    errors on the visits and insulin and caused 5 (p < 0.001), with 18 false claims before and
+    after.
+  - Two ideas were tested and not kept: adding claims a claim implies, and matching a quote
+    spliced from two parts of a sentence. Neither helped on fresh data.
+- **Results on the latest set.**
+  - Every item passes except two visits. Lunch is found in 86 of 91 referrals that ask for it,
+    and tea in 42 of 47.
+  - In two of those referrals the writing model turned "QDS calls" (four a day) into an invented
+    name, so they ask for no visit. The rest give only a count of calls inside an unpunctuated
+    message.
+  - Every other item is found in at least 96% of the referrals that state it, and precision is
+    at least 0.93 for every item.
+  - If every draft were accepted unchanged, 2 of the 477 visits would offer a carer without a
+    needed skill: one missed end-of-life need. The person checking the draft is the safeguard. A
+    missed rule still shows as "not stated, ask the referrer".
+- **Limits.**
+  - Only synthetic referrals are used, because real ones are personal data.
+  - A quote proves its words are in the referral, not that they state the claim. A mention that
+    asks for nothing can still become a claim: a friend who calls round at teatime became a tea
+    visit, and an autistic niece a learning disability.
+  - Some quotes are a single word from a list ("lunch"), which is thin evidence on its own.
+  - A referral cannot be typed into the app yet: the screen shows six demo referrals read on the
+    laptop. Two-carer pairing is not built.
+- **The confirm screen.** Sign in as the coordinator and open Referrals.
+  - Each demo referral shows the model's quotes highlighted, and one control per field. Each
+    control shows its quoted words, "added by a person", or "Not stated: ask the referrer".
+  - Saving is refused while unstated options would be saved as "not needed", until you tick "I
+    have asked the referrer".
+  - Each confirmation is kept, with who made it, taken from the sign-in. Only then does the page
+    list each visit's rules and the carers who may go, with why a window is narrowed or a gender
+    rule applies.
+  - `tests/test_referral_screens.py` attacks it: other roles, forged forms, unknown values, a
+    confirmer named in the form, carers listed from the model's read, edited decisions, markup,
+    other demo visitors, and referral text in the logs.
+
 ## How it is checked
 
 - `uv run python scripts/check.py` runs formatting, linting, type checks and every test.
@@ -205,6 +293,8 @@ SIGN_IN=accounts AUDIT_KEY=<64 hex characters> uv run homecare fhir export --cli
   when the attack fails. Each test was also checked by switching its protection off and watching
   the test fail. Examples:
   - `tests/test_isolation.py`: injected instructions against the two-read design;
+  - `tests/test_referral_reader.py`: invented quotes, injected instructions and unconfirmed
+    drafts against the referral reader;
   - `tests/test_app.py` and `tests/test_screens.py`: sign-in, sessions, forms, roles, escaping;
   - `tests/test_audit_attacks.py`: editing, deleting and rewriting the audit log.
 - **Accessibility.** `uv run python scripts/ui_check.py` checks every screen against WCAG 2.2 A and
@@ -261,6 +351,10 @@ SIGN_IN=accounts AUDIT_KEY=<64 hex characters> uv run homecare fhir export --cli
 | Have the local model read app notes it has not read yet (accounts mode) | `SIGN_IN=accounts uv run homecare platform read` |
 | Queue-ranking study (CPU; not adopted) | `uv run homecare evaluate rank --model gemma-4-26b-a4b --arm claim notes-dev` |
 | Possible-tampering study (CPU) | `uv run homecare evaluate tamper notes-dev` |
+| Write and register the synthetic referral sets | `uv run homecare referrals write referrals-dev`, then `uv run homecare referrals write referrals-heldout-2 referrals-fresh referrals-fresh-2` |
+| Read every referral of a set, then score the run | `uv run homecare referrals extract --model gemma-4-26b-a4b referrals-fresh-2`, then `uv run homecare evaluate referrals --model gemma-4-26b-a4b referrals-fresh-2` |
+| Read one referral into a draft profile, then match it once a person has confirmed it | `uv run homecare referrals read FILE --out draft.json`, then `uv run homecare referrals match draft.json` |
+| Write, read and pin the coordinator screen's six demo referrals | `uv run homecare referrals demo` |
 
 ## Settings
 
@@ -297,15 +391,16 @@ All are optional.
 | `web/` | The carer app's TypeScript (`app/` for the page, `sw/` for the offline worker), compiled into `src/homecare/app/static/` |
 | `src/homecare/imports/` | Checking a visit export, and the sample export with its planted faults |
 | `src/homecare/fhir.py` | One client's record as a FHIR R4 Bundle |
+| `src/homecare/referrals/` | Reading a referral: what it can state, the reader, and matching a confirmed profile |
 | `src/homecare/retention/` | The simulated workforce and the retention model |
 | `src/homecare/notes/` | Reading notes: categories, the extractor, quote checks, the review queue's rules |
-| `src/homecare/world/` | The synthetic agency: clients, carers, visits, the road map, the note writer |
+| `src/homecare/world/` | The synthetic agency: clients, carers, visits, the road map, the note and referral writers |
 | `src/homecare/matching/` | Visit planning: the optimiser, the hand-made baseline, the independent checker |
 | `src/homecare/evaluation/` | Scoring runs, attack tests and the two studies |
 | `tests/` | Every test, including the attack tests |
 | `scripts/` | The full check (`check.py`), the accessibility check (`ui_check.py`), the carer app's browser check (`pwa_check.py`), the phone walk (`phone_walk.py`) and the icon renderer (`make_icons.py`) |
 | `models.json` | Every local model: source, revision, licence and SHA-256 |
-| `evaluation/sets.json` | The SHA-256 of every registered note set, so a changed set is refused |
+| `evaluation/sets.json` | The SHA-256 of every registered note and referral set, so a changed set is refused |
 | `Dockerfile`, `requirements/serve.lock` | The small serving image, installed from hash-locked requirements |
 | `compose.yaml` | The simple way to run the live demo: the app in demo mode and a Cloudflare tunnel, with no port opened on the host |
 | `k8s/`, `scripts/cluster.py`, `scripts/cluster_check.py` | The live demo on a local Kubernetes cluster: the manifests, the start-up script and the attack checks |

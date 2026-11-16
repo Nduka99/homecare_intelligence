@@ -71,6 +71,36 @@
    "files": {
     "notes.jsonl": "0c0dd6687527b6ae89c8c47e0f9469d7434625aee32991eb65a897b093c288ef"
    }
+  },
+  "referrals-dev": {
+   "description": "148 synthetic referrals written by glm-4.7-flash",
+   "files": {
+    "referrals.jsonl": "b8314411791a8269f780e934dedced2090fb392299850a0b3261fbd9d02020b1"
+   }
+  },
+  "referrals-fresh": {
+   "description": "199 synthetic referrals written by qwen3.6-35b-a3b",
+   "files": {
+    "referrals.jsonl": "52cb7e38d8557635969dbd5a56fbc270bde6aa2358d4970acd6f86d6409d3b01"
+   }
+  },
+  "referrals-fresh-2": {
+   "description": "196 synthetic referrals written by nemotron-3.5-lightning",
+   "files": {
+    "referrals.jsonl": "4b190acf9037e7f1468d00acb34ff3c7cbdf8d2be5b82cbbb0008888428dca43"
+   }
+  },
+  "referrals-heldout": {
+   "description": "139 synthetic referrals written by nemotron-3.5-lightning",
+   "files": {
+    "referrals.jsonl": "785a1c1b246270ae5159a99f25421342b8ba6d506805570a88a1605b69eef22e"
+   }
+  },
+  "referrals-heldout-2": {
+   "description": "194 synthetic referrals written by nemotron-3.5-lightning",
+   "files": {
+    "referrals.jsonl": "850ed84212234d4aff74dc579ee38981236ca95c2da9f107e9a36e45d78e930f"
+   }
   }
  }
 }

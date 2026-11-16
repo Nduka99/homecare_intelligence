@@ -117,6 +117,37 @@ def build(
     }
 
 
+REFERRALS = FILE.with_name("referrals.json")
+
+
+def build_referrals(
+    written: list[dict[str, Any]],
+    reads: dict[str, dict[str, Any]],
+    writer: dict[str, str],
+    reader: dict[str, str],
+) -> dict[str, Any]:
+    """The coordinator's demo referrals: each written referral's name and text, and the reader's
+    claims and dropped claims for it (`reads`, by the written referral's id). The profiles the
+    referrals were written from stay out, because a real platform never has them."""
+    referrals = []
+    for number, referral in enumerate(written, start=1):
+        read = reads[referral["id"]]
+        referrals.append({
+            "id": f"referral-{number}",
+            "name": referral["name"],
+            "text": referral["text"],
+            "claims": read["claims"],
+            "dropped": read["dropped"],
+        })  # fmt: skip
+    return {
+        "synthetic": True,
+        "about": "SYNTHETIC demo referrals: no real person, client, referrer or provider.",
+        "writer": writer,
+        "reader": reader,
+        "referrals": referrals,
+    }
+
+
 def dumps(seed: dict[str, Any]) -> str:
     """One stable text form, so the same inputs always give the same file and pin."""
     return json.dumps(seed, indent=1, sort_keys=True, ensure_ascii=False) + "\n"

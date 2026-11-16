@@ -85,7 +85,7 @@ def test_the_database_loads_the_seed_once(tmp_path: Path) -> None:
     db.prepare(tmp_path / "h.db", built)
     connection = db.connect(tmp_path / "h.db")
     assert connection.execute("SELECT COUNT(*) FROM notes").fetchone()[0] == 1
-    assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
+    assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
 
 
 def test_notes_cannot_be_edited_or_deleted(tmp_path: Path) -> None:

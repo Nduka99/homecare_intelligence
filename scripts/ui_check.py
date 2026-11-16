@@ -307,6 +307,8 @@ def forced_colours(browser: Browser, url: str, carer: str, note: int) -> list[di
     page.get_by_role("button", name="Sign in as the coordinator").click()
     found += current_marks(page, "rota-carer", f"{url}/rota?day={DAY}&carer=K08")
     page.screenshot(path=str(OUT / "rota-carer-forced-colours.png"))
+    found += current_marks(page, "referral", f"{url}/referrals/referral-1")
+    page.screenshot(path=str(OUT / "referral-forced-colours.png"), full_page=True)
     context.close()
     return found
 
@@ -393,6 +395,14 @@ def main_check() -> int:
                     check(coordinator, "replan", size, scheme, report)
                     coordinator.goto(url + "/imports")
                     check(coordinator, "imports", size, scheme, report)
+                    coordinator.goto(url + "/referrals")
+                    check(coordinator, "referrals", size, scheme, report)
+                    coordinator.goto(url + "/referrals/referral-1")
+                    check(coordinator, "referral", size, scheme, report)
+                    coordinator.get_by_label("I have asked the referrer").check()
+                    coordinator.get_by_role("button", name="Confirm this profile").click()
+                    coordinator.wait_for_url("**/referrals/referral-1#who")
+                    check(coordinator, "referral-confirmed", size, scheme, report)
             report += forced_colours(browser, url, carer, first)
             first_views(browser, url)
             caught = control(browser, url)
@@ -402,7 +412,7 @@ def main_check() -> int:
     for row in report:
         print(f"{row['screen']} {row['size']} {row['scheme']}: {row['id']} ({row['impact']}) "
               f"{row['help']} {row['nodes']}")  # fmt: skip
-    screens_checked = 22 * len(SIZES) * len(SCHEMES)
+    screens_checked = 25 * len(SIZES) * len(SCHEMES)
     print(f"axe: {len(report)} violations on {screens_checked} screen captures")
     missed = CONTROL_EXPECTS - caught
     print(f"control (faint text, no language, too wide): caught {sorted(caught & CONTROL_EXPECTS)}")

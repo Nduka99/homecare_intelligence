@@ -69,6 +69,19 @@ def load_seed(connection: sqlite3.Connection, seed: dict[str, Any]) -> None:
     connection.commit()
 
 
+def load_referrals(connection: sqlite3.Connection, data: dict[str, Any]) -> None:
+    """Load the demo referrals and their reads into an empty table; a filled one is left alone."""
+    if connection.execute("SELECT COUNT(*) FROM referrals").fetchone()[0]:
+        return
+    for referral in data["referrals"]:
+        connection.execute(
+            "INSERT INTO referrals VALUES (?, ?, ?, ?, ?)",
+            (referral["id"], referral["name"], referral["text"], json.dumps(referral["claims"]),
+             json.dumps(referral["dropped"])),
+        )  # fmt: skip
+    connection.commit()
+
+
 def prepare(path: Path, seed: dict[str, Any]) -> None:
     """Create or migrate the database at `path` and load the demo week if it is empty."""
     path.parent.mkdir(parents=True, exist_ok=True)

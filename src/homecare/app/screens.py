@@ -12,7 +12,10 @@ from typing import Any
 
 from homecare.notes import routing
 from homecare.notes.categories import ACT_THIS_VISIT, ACT_TODAY, CATEGORIES
+from homecare.referrals import fields as referral_fields
+from homecare.referrals import match as referral_match
 from homecare.retention import model as retention_model
+from homecare.world import agency
 
 SAMPLE_SEED = "demo-week"  # the random-check draw for the demo week (routing.sampled)
 SLOT_NAMES = {"morning": "Morning", "lunch": "Lunch", "tea": "Tea-time", "bed": "Bedtime"}
@@ -417,8 +420,7 @@ def import_report(connection: sqlite3.Connection) -> dict[str, Any] | None:
     if found is None:
         return None
     report = dict(found)
-    stamp = datetime.datetime.fromtimestamp(found["imported"], datetime.UTC)
-    report["imported"] = stamp.strftime("%d %B %Y %H:%M")
+    report["imported"] = stamp(found["imported"])
     held = []
     for row in connection.execute(
         "SELECT * FROM quarantine WHERE import = ? ORDER BY line", (found["id"],)
@@ -592,4 +594,190 @@ def replan_view(connection: sqlite3.Connection, saved: dict[str, Any]) -> dict[s
         "driving": totals["driving_minutes"],
         "breaks": totals["continuity_breaks"],
         "moved": totals["minutes_moved"]["after"],
+    }
+
+
+# The referral confirm form: one control per claim, named by the claim itself, in the order shown.
+NEED_LABELS = {
+    "need: personal care": "Personal care: washing, dressing, the toilet",
+    "need: medication": "Medicines given or prompted",
+    "need: dementia": "Dementia",
+    "need: learning disability": "Learning disability or autism",
+    "need: end of life": "End of life care",
+}
+FLAG_LABELS = {
+    "time-critical medicine": "A medicine given at a set time, within 30 minutes",
+    "insulin by carers": "Insulin given by carers, delegated by a nurse",
+    "two carers with a hoist": "Moved with a hoist, so two carers",
+}
+GENDERS = {"none": "No preference", "female": "Women only", "male": "Men only"}
+YES = "yes"  # the value every ticked claim posts
+# Every option but the carers' gender (a radio): the needs, visits and rules.
+OPTIONS = list(NEED_LABELS) + [f"visit: {slot}" for slot in agency.SLOTS] + list(FLAG_LABELS)
+
+
+def stamp(seconds: float) -> str:
+    """A stored time as the coordinator reads it, in UTC."""
+    return datetime.datetime.fromtimestamp(seconds, datetime.UTC).strftime("%d %B %Y %H:%M")
+
+
+def latest_profiles(connection: sqlite3.Connection, visitor: str | None) -> dict[str, Any]:
+    """Each referral's newest confirmed profile in view: a demo visitor's own, or everyone's in
+    accounts mode."""
+    latest = {}
+    for row in connection.execute("SELECT * FROM referral_decisions ORDER BY id"):
+        if visitor is None or row["visitor"] == visitor:
+            latest[row["referral"]] = row
+    return latest
+
+
+def options(claims: list[str]) -> list[str]:
+    """The form's options the claims leave unstated, each a question for the referrer: every
+    need, visit and rule not claimed, and the carers' gender when neither gender is claimed."""
+    found = [claim for claim in OPTIONS if claim not in claims]
+    if not set(referral_fields.GENDER_CLAIMS) & set(claims):
+        found.append("gender")
+    return found
+
+
+def referral_list(connection: sqlite3.Connection, visitor: str | None) -> list[dict[str, Any]]:
+    """Every referral with what the read found and whether a profile has been confirmed."""
+    latest = latest_profiles(connection, visitor)
+    rows = []
+    for row in connection.execute("SELECT * FROM referrals ORDER BY id"):
+        names = [claim["claim"] for claim in json.loads(row["claims"])]
+        rows.append({
+            "id": row["id"],
+            "name": row["name"],
+            "claims": len(names),
+            "to_ask": len(options(names)),
+            "conflict": bool(referral_fields.conflicts(names)),
+            "confirmed": row["id"] in latest,
+        })  # fmt: skip
+    return rows
+
+
+def profile_from_form(form: dict[str, str], read: list[str]) -> tuple[dict[str, Any] | None, str]:
+    """The profile a posted confirm form states, built only from known claim names and values,
+    and why it cannot be saved ("" when it can). An unknown value gives no profile. A profile is
+    returned with its reason, so the form can be shown again as it was posted, when it has no
+    visit, or when an option the referral (`read`, its claims) never states would be saved as
+    not needed without the person saying they asked the referrer. Unknown names are ignored."""
+    ticked = []
+    for claim in referral_fields.CLAIMS:
+        if claim in referral_fields.GENDER_CLAIMS or claim not in form:
+            continue
+        if form[claim] != YES:
+            return None, "unknown value"
+        ticked.append(claim)
+    gender = form.get("gender", "")
+    if gender not in GENDERS:
+        return None, "unknown gender"
+    if gender != "none":
+        ticked.append(f"carer gender: {gender}")
+    profile = referral_fields.profile(ticked)
+    if not profile["slots"]:
+        return profile, "no visit"
+    unasked = [option for option in options(read) if option not in ticked]
+    if gender != "none":
+        unasked = [option for option in unasked if option != "gender"]
+    if unasked and form.get("asked") != YES:
+        return profile, "not asked"
+    return profile, ""
+
+
+def visit_view(visit: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+    """One visit's rules and the carers who may go, in words for the coordinator, with why a
+    rule differs from the profile as confirmed: a window narrowed for a medicine at a set time,
+    or a gender rule that applies only where personal care is given."""
+    opens, closes, _ = agency.SLOTS[visit["slot"]]
+    why = []
+    if (visit["open"], visit["close"]) != (opens, closes):
+        why.append("window narrowed to 30 minutes either side of the medicine's set time")
+    who = {"female": "women", "male": "men"}
+    if visit["gender"]:
+        why.append(f"{who[visit['gender']]} only: personal care is given at this visit")
+    elif profile["gender_preference"]:
+        why.append("any carer: personal care is given at the morning and bedtime visits only")
+    return {
+        "visit": SLOT_NAMES[visit["slot"]],
+        "window": f"{clock(visit['open'])}–{clock(visit['close'])}",
+        "skills": visit["skills"],
+        "two_carers": visit["two_carers"],
+        "why": why,
+        "carers": visit["carers"],
+    }
+
+
+def referral_detail(
+    connection: sqlite3.Connection,
+    referral_id: str,
+    visitor: str | None,
+    carers: list[dict[str, Any]],
+    posted: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """One referral: its text with the read's quotes highlighted, the form's controls filled from
+    `posted` (a profile refused on saving), else the newest confirmed profile, else the read; and,
+    only once a person has confirmed a profile, each visit's rules and the carers who may go.
+    None if there is no such referral."""
+    row = connection.execute("SELECT * FROM referrals WHERE id = ?", (referral_id,)).fetchone()
+    if row is None:
+        return None
+    claims = json.loads(row["claims"])
+    body = row["body"]
+    # Quotes are numbered in reading order, so the numbers run down the referral.
+    quotes = sorted({claim["quote"] for claim in claims}, key=lambda quote: body.find(quote))
+    numbers = {claim["claim"]: quotes.index(claim["quote"]) + 1 for claim in claims}
+    words = {claim["claim"]: claim["quote"] for claim in claims}
+    names = list(numbers)
+    decision = latest_profiles(connection, visitor).get(referral_id)
+    confirmed = json.loads(decision["profile"]) if decision else None
+    shown = posted or confirmed
+    chosen = referral_fields.claims_of(shown) if shown else names
+
+    def control(claim: str, label: str) -> dict[str, Any]:
+        return {"name": claim, "label": label, "checked": claim in chosen,
+                "quote": numbers.get(claim), "words": words.get(claim)}  # fmt: skip
+
+    visits = []
+    for slot, (opens, closes, _) in agency.SLOTS.items():
+        label = f"{SLOT_NAMES[slot]}, {clock(opens)}–{clock(closes)}"
+        visits.append(control(f"visit: {slot}", label))
+    conflict = bool(referral_fields.conflicts(names))
+    if shown:
+        gender: str | None = shown["gender_preference"] or "none"
+    elif conflict:
+        gender = None  # the read says both: a person must choose
+    else:
+        gender = referral_fields.profile(names)["gender_preference"] or "none"
+    gender_quotes = [
+        {"number": numbers[c], "words": words[c]}
+        for c in referral_fields.GENDER_CLAIMS
+        if c in numbers
+    ]
+    matching = None
+    if decision is not None and confirmed is not None:
+        draft = {"confirmed_by": decision["decided_by"], "conflicts": [], "profile": confirmed}
+        if not referral_match.refusals(draft):
+            found = referral_match.visits(confirmed, carers)
+            matching = [visit_view(visit, confirmed) for visit in found]
+    return {
+        "id": referral_id,
+        "name": row["name"],
+        "segments": segments(body, quotes),
+        "quotes": len(quotes),
+        "dropped": sorted({claim["claim"] for claim in json.loads(row["dropped"])}),
+        "needs": [control(claim, label) for claim, label in NEED_LABELS.items()],
+        "visits": visits,
+        "flags": [control(claim, label) for claim, label in FLAG_LABELS.items()],
+        "genders": GENDERS,
+        "gender": gender,
+        "gender_quotes": gender_quotes,
+        "to_ask": len(options(names)),
+        "conflict": conflict and not shown,
+        "decision": {"by": decision["decided_by"], "at": stamp(decision["decided"])}
+        if decision
+        else None,
+        "matching": matching,
+        "carer_count": len(carers),
     }
