@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from homecare.app import db, maps
+from homecare.app import db, maps, screens, seed
 from test_screens import LAST_DAY, csrf_of, make, sign_in, visit_to_write
 
 
@@ -190,8 +190,8 @@ def test_a_visitors_note_waits_for_the_lead_as_not_yet_read(tmp_path: Path) -> N
     note = app_notes(tmp_path)[0]["id"]
     sign_in(client, "lead")
     register = client.get(f"/queue?day={LAST_DAY}").text
-    assert "Not yet read by the model" in register and f"/notes/{note}" in register
-    assert "Not read by the model yet" in client.get(f"/notes/{note}").text
+    assert "Not checked by AI yet" in register and f"/notes/{note}" in register
+    assert "Not checked by AI yet" in client.get(f"/notes/{note}").text
 
 
 def test_the_day_sheet_shows_the_next_visit_progress_and_the_route(tmp_path: Path) -> None:
@@ -199,7 +199,8 @@ def test_the_day_sheet_shows_the_next_visit_progress_and_the_route(tmp_path: Pat
     visit = unwritten_visit(tmp_path)
     sign_in(client, visit["carer"])
     page = client.get(f"/today?day={LAST_DAY}").text
-    assert "Demo clock" in page and "visits written up" in page
+    now = screens.clock(seed.load()["now"]["minute"])
+    assert f'<span class="figure">{now}</span> · ' in page and "visits written up" in page
     write_up = page.split('class="card write-up"', 1)[1].split("</section>", 1)[0]
     assert f'href="/visits/{visit["id"]}/note"' in write_up
     after_next = page.split('class="card next-card"', 1)[1].split("</section>", 1)[0]

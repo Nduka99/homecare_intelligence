@@ -8,6 +8,7 @@ segments here, so the highlighting needs no markup from either.
 import datetime
 import json
 import sqlite3
+import zoneinfo
 from typing import Any
 
 from homecare.notes import routing
@@ -22,6 +23,7 @@ SLOT_NAMES = {"morning": "Morning", "lunch": "Lunch", "tea": "Tea-time", "bed": 
 LABELS = ("confirmed", "wrong category", "not a concern")
 NOTHING_MISSED = "nothing"  # section 4's "I read the whole note: nothing missed"
 CATEGORIES_SET = set(CATEGORIES)
+LONDON = zoneinfo.ZoneInfo("Europe/London")  # the agency is in Birmingham
 SECTIONS = [
     (ACT_TODAY, "Act today"),
     (ACT_THIS_VISIT, "Act this visit"),
@@ -43,17 +45,14 @@ def why(reasons: list[str]) -> str:
 
 def flags(reasons: list[str], found_by: list[str]) -> list[str]:
     """What the lead should know before opening a note: every urgent finding came from a sentence
-    read alone (such reads miss context, so they raise more false alarms), or the note carries the
-    possible-tampering tag."""
+    read alone (such reads miss context, so they raise more false alarms, hence "check the
+    context"), or the note carries the possible-tampering tag."""
     found = []
     if found_by and all(read == "sentence" for read in found_by):
-        found.append("sentence reads only")
+        found.append("check the context")
     if routing.TAMPERING in reasons:
         found.append("possible tampering")
     return found
-
-
-READS = {"note": "the whole-note read", "both": "both reads", "sentence": "a sentence read alone"}
 
 
 def same_concern(a: dict[str, Any], b: dict[str, Any]) -> bool:
@@ -284,7 +283,6 @@ def note_detail(
     groups = group_findings(findings)
     for number, group in enumerate(groups, start=1):
         group["number"] = number
-        group["read_label"] = READS.get(group["found_by"], group["found_by"])
         group["sentence_only"] = group["found_by"] == "sentence"
         group["decision"] = latest.get(group["id"])
     queue = day_queue(connection, note["day"], visitor)
@@ -307,7 +305,6 @@ def note_detail(
         "id": note_id,
         "from_app": note["source"] == "app",
         "read": read,
-        "reading": json.loads(reading["extraction"]) if reading else None,
         "amends": note["amends"],
         "additions": [row["id"] for row in additions],
         "day": note["day"],
@@ -452,7 +449,7 @@ def import_report(connection: sqlite3.Connection) -> dict[str, Any] | None:
 
 # The planner's reasons, as a coordinator would say them.
 REASON_WORDS = {
-    "needs two carers (not planned yet)": "Needs two carers: the planner does not pair carers yet",
+    "needs two carers (not planned yet)": "Needs two carers: pair them by hand",
     "no skilled carer": "No carer working has the skills",
     "no carer of the preferred gender": "No carer working is of the client's preferred gender",
     "outside every shift": "Outside every shift",
@@ -617,8 +614,8 @@ OPTIONS = list(NEED_LABELS) + [f"visit: {slot}" for slot in agency.SLOTS] + list
 
 
 def stamp(seconds: float) -> str:
-    """A stored time as the coordinator reads it, in UTC."""
-    return datetime.datetime.fromtimestamp(seconds, datetime.UTC).strftime("%d %B %Y %H:%M")
+    """A stored time as the coordinator reads it, in UK time."""
+    return datetime.datetime.fromtimestamp(seconds, LONDON).strftime("%d %B %Y, %H:%M")
 
 
 def latest_profiles(connection: sqlite3.Connection, visitor: str | None) -> dict[str, Any]:

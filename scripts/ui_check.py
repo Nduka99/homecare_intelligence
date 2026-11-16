@@ -309,6 +309,9 @@ def forced_colours(browser: Browser, url: str, carer: str, note: int) -> list[di
     page.screenshot(path=str(OUT / "rota-carer-forced-colours.png"))
     found += current_marks(page, "referral", f"{url}/referrals/referral-1")
     page.screenshot(path=str(OUT / "referral-forced-colours.png"), full_page=True)
+    # The guide marks nothing as current; its capture is read for borders and bold labels.
+    page.goto(url + "/guide")
+    page.screenshot(path=str(OUT / "guide-forced-colours.png"), full_page=True)
     context.close()
     return found
 
@@ -350,6 +353,10 @@ def main_check() -> int:
             for scheme in SCHEMES:
                 for size, (width, height) in SIZES.items():
                     lead = new_page(browser, width, height, scheme)
+                    lead.goto(url + "/guide")
+                    check(lead, "guide", size, scheme, report)
+                    lead.goto(url + "/no-such-page")
+                    check(lead, "not-found", size, scheme, report)
                     lead.goto(url + "/signin")
                     check(lead, "signin", size, scheme, report)
                     lead.get_by_role("button", name="Sign in as the safeguarding lead").click()
@@ -412,7 +419,7 @@ def main_check() -> int:
     for row in report:
         print(f"{row['screen']} {row['size']} {row['scheme']}: {row['id']} ({row['impact']}) "
               f"{row['help']} {row['nodes']}")  # fmt: skip
-    screens_checked = 25 * len(SIZES) * len(SCHEMES)
+    screens_checked = 27 * len(SIZES) * len(SCHEMES)
     print(f"axe: {len(report)} violations on {screens_checked} screen captures")
     missed = CONTROL_EXPECTS - caught
     print(f"control (faint text, no language, too wide): caught {sorted(caught & CONTROL_EXPECTS)}")

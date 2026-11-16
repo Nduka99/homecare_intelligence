@@ -25,7 +25,8 @@
 } %}
 
 {% macro band_tag(band, words=None) -%}
-<span class="tag {{ TONES.get(band, '') }}">{{ (words or band) | capitalize }}</span>
+{# Given words are shown as written: `capitalize` would lower the rest ("AI" to "ai"). #}
+<span class="tag {{ TONES.get(band, '') }}">{{ words if words else band | capitalize }}</span>
 {%- endmacro %}
 
 {% macro days(week, current, link) -%}

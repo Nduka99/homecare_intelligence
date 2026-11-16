@@ -3,6 +3,7 @@ real v2 extraction: a concern found moves the note from "not yet read" into the 
 quote not in the note is dropped; a failed read leaves the note listed as unread. Each test
 was checked by breaking its protection on purpose."""
 
+import json
 import re
 import uuid
 from pathlib import Path
@@ -54,15 +55,19 @@ def test_a_concern_found_moves_the_note_into_the_register(
     client, note = written(tmp_path, f"Lunch made. {CONCERN} Left her comfortable.")
     sign_in(client, "lead")
     before = client.get(f"/queue?day={LAST_DAY}").text
-    assert "Not yet read by the model" in before
+    assert "Not checked by AI yet" in before
     monkeypatch.setattr(llm, "chat", stand_in("fresh bruise on her upper arm"))
     assert read(tmp_path) == {"read": [note], "failed": []}
     after = client.get(f"/queue?day={LAST_DAY}").text
-    assert "Not yet read by the model" not in after
+    assert "Not checked by AI yet" not in after
     act_today = after.split("Act today", 1)[1].split("</section>", 1)[0]
     assert f"/notes/{note}" in act_today
     page = client.get(f"/notes/{note}").text
-    assert "<mark>fresh bruise on her upper arm</mark>" in page and "stand-in" in page
+    assert "<mark>fresh bruise on her upper arm</mark>" in page and "stand-in" not in page
+    # Which model read the note is kept with the reading for audit, never shown on the screen.
+    connection = db.connect(tmp_path / "demo.db")
+    stored = connection.execute("SELECT extraction FROM readings WHERE note = ?", (note,))
+    assert json.loads(stored.fetchone()["extraction"])["model"] == "stand-in"
 
 
 def test_a_quote_not_in_the_note_is_dropped(
@@ -90,5 +95,5 @@ def test_a_failed_read_leaves_the_note_unread_and_listed(
     assert read(tmp_path) == {"read": [], "failed": [note]}
     sign_in(client, "lead")
     register = client.get(f"/queue?day={LAST_DAY}").text
-    unread_section = register.split("Not yet read by the model", 1)[1]
+    unread_section = register.split("Not checked by AI yet", 1)[1]
     assert re.search(f"/notes/{note}", unread_section)

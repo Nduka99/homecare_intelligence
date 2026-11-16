@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% from "marks.html" import icon %}
+{% block title %}How to use this demo{% endblock %}
+{% block main %}
+{# Each step names the screen it happens on (`data-screen`, the route's path) and puts the words
+   the reader selects or looks for in <strong>, exactly as the screen shows them. The tests check
+   both: every screen has a step, and every bold word is on a screen. #}
+<div class="page-head">
+  <h1>How to use this demo</h1>
+  <p class="sub">Software for one made-up home-care agency in Birmingham. Take any of the four roles. You get your own private copy, so nothing you do reaches anyone else, and everything resets when the service restarts.</p>
+</div>
+
+<section class="card" aria-labelledby="quick-title">
+  <h2 id="quick-title">Short on time?</h2>
+  <p>These three show the most in five minutes.</p>
+  <ol class="steps">
+    <li><a href="#carer-offline">Write a visit note with no signal</a>, as a carer.</li>
+    <li><a href="#lead-decide">Decide each finding in a flagged note</a>, as the safeguarding lead.</li>
+    <li><a href="#coordinator-referral">Confirm a new client's referral</a>, as the coordinator.</li>
+  </ol>
+</section>
+
+<h2 class="section-title" id="roles-title">Choose a role</h2>
+<ul class="list" aria-labelledby="roles-title">
+  {% for id, name, does in [
+    ("carer", "Carer", "Your day, your route, and writing each visit up. Best on a phone."),
+    ("lead", "Safeguarding lead", "The day's flagged notes, and a decision on each finding."),
+    ("manager", "Manager", "Who might benefit from a conversation about their workload."),
+    ("coordinator", "Coordinator", "The rota, a re-plan when a carer drops out, visit imports and new referrals."),
+  ] %}
+  <li>
+    <a class="row plain" href="#{{ id }}">
+      <span class="row-main">
+        <span class="row-title">{{ name }}</span>
+        <span class="row-meta">{{ does }}</span>
+      </span>
+      <span class="chevron">{{ icon("chevron") }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+<section class="card guide-role" id="carer" aria-labelledby="carer-title">
+  <h2 id="carer-title">Carer</h2>
+  <p class="meta">Best on a phone. On a computer the same screens spread wider.</p>
+  <div class="guide-task">
+    <h3>See your day and route</h3>
+    <ol class="steps">
+      <li data-screen="/signin">On the sign-in page, choose a number under <strong>Your carer number</strong>.</li>
+      <li data-screen="/signin">Select <strong>Sign in as this carer</strong>.</li>
+      <li data-screen="/today">Read <strong>To write up</strong> first, then your next visit and when to leave.</li>
+      <li data-screen="/today">Under <strong>Your route</strong>, select <strong>Zoom in</strong>, <strong>Zoom out</strong> or <strong>Whole route</strong>.</li>
+      <li data-screen="/today">Select a day in the week to see that day's visits.</li>
+    </ol>
+  </div>
+  <div class="guide-task" id="carer-offline">
+    <h3>Write a visit note, even with no signal</h3>
+    <ol class="steps">
+      <li data-screen="/today">After your day opens, wait a few seconds so the phone can save it.</li>
+      <li>Turn off your signal, for example with aeroplane mode.</li>
+      <li data-screen="/today">Select <strong>Write the note</strong>.</li>
+      <li data-screen="/visits/{visit_id}/note">Type what you did and how the person seemed, then select <strong>Send the note</strong>.</li>
+      <li data-screen="/today">The note stays on the phone. Go back to <strong>Your visits</strong> to see it waiting.</li>
+      <li data-screen="/today">Turn your signal back on and select <strong>Send now</strong>.</li>
+    </ol>
+  </div>
+  <div class="guide-task">
+    <h3>Add to a note you sent</h3>
+    <ol class="steps">
+      <li data-screen="/today">On a visit you have written up, select <strong>Add to your note</strong>.</li>
+      <li data-screen="/visits/{visit_id}/note">Type your addition and select <strong>Send the addition</strong>. Your first note is never changed.</li>
+      <li data-screen="/today">When you finish, select <strong>Sign out</strong>. It clears the app from the phone.</li>
+    </ol>
+  </div>
+  <div class="actions"><a class="button secondary" href="/signin#role-carer">Start as a carer</a></div>
+</section>
+
+<section class="card guide-role" id="lead" aria-labelledby="lead-title">
+  <h2 id="lead-title">Safeguarding lead</h2>
+  <p class="meta">AI has read each note and quoted the words behind every finding. You decide.</p>
+  <div class="guide-task">
+    <h3>Review the day's notes in order</h3>
+    <ol class="steps">
+      <li data-screen="/signin">Select <strong>Sign in as the safeguarding lead</strong>.</li>
+      <li data-screen="/queue">The <strong>Review register</strong> lists the notes in the order to review them. Notes AI has not checked come first, then act today, act this visit, random checks and possible tampering.</li>
+      <li data-screen="/queue">Select <strong>Open the first note to decide</strong>.</li>
+    </ol>
+  </div>
+  <div class="guide-task" id="lead-decide">
+    <h3>Decide each finding in a flagged note</h3>
+    <ol class="steps">
+      <li data-screen="/notes/{note_id}">Read the note. The highlighted words are the exact quotes the findings rest on.</li>
+      <li data-screen="/notes/{note_id}">For each finding, select <strong>Confirmed</strong>, <strong>Wrong category</strong> or <strong>Not a concern</strong>.</li>
+      <li data-screen="/notes/{note_id}">If you chose <strong>Wrong category</strong>, choose the right one from the list below it.</li>
+      <li data-screen="/notes/{note_id}">Select <strong>Save and open the next note</strong>.</li>
+    </ol>
+  </div>
+  <div class="guide-task">
+    <h3>Record your read of a note with no finding</h3>
+    <ol class="steps">
+      <li data-screen="/notes/{note_id}">Some notes are random checks: AI found nothing in them, and a person reads them anyway.</li>
+      <li data-screen="/notes/{note_id}">Under <strong>Anything the AI missed</strong>, choose <strong>I read the whole note: nothing missed</strong>, or the concern it missed.</li>
+      <li data-screen="/notes/{note_id}">Select <strong>Save and open the next note</strong>. It will not save until you record your read.</li>
+    </ol>
+  </div>
+  <div class="actions"><a class="button secondary" href="/signin#role-lead">Start as the safeguarding lead</a></div>
+</section>
+
+<section class="card guide-role" id="manager" aria-labelledby="manager-title">
+  <h2 id="manager-title">Manager</h2>
+  <div class="guide-task">
+    <h3>See who might benefit from a conversation</h3>
+    <ol class="steps">
+      <li data-screen="/signin">Select <strong>Sign in as the manager</strong>.</li>
+      <li data-screen="/team">Read the list, most likely to leave first. The top tenth are marked <strong>Suggested</strong>.</li>
+      <li data-screen="/team">Select <strong>What raises it most</strong> under a carer to see why.</li>
+      <li>The list supports a conversation. It never decides anything about a person.</li>
+    </ol>
+  </div>
+  <div class="actions"><a class="button secondary" href="/signin#role-manager">Start as the manager</a></div>
+</section>
+
+<section class="card guide-role" id="coordinator" aria-labelledby="coordinator-title">
+  <h2 id="coordinator-title">Coordinator</h2>
+  <div class="guide-task">
+    <h3>Check the rota and a carer's route</h3>
+    <ol class="steps">
+      <li data-screen="/signin">Select <strong>Sign in as the coordinator</strong>.</li>
+      <li data-screen="/rota">The <strong>Rota</strong> shows who works on the day and the visits to arrange by hand, grouped by reason.</li>
+      <li data-screen="/rota">Select a carer under <strong>Carers working</strong> to see their route and visits.</li>
+    </ol>
+  </div>
+  <div class="guide-task">
+    <h3>See the re-plan when a carer drops out</h3>
+    <ol class="steps">
+      <li data-screen="/rota">On the rota, select <strong>See the re-plan</strong>.</li>
+      <li data-screen="/rota/replan">Read who takes each visit, which times move and who gets more work.</li>
+    </ol>
+  </div>
+  <div class="guide-task">
+    <h3>See what a visit import held back</h3>
+    <ol class="steps">
+      <li data-screen="/rota">Above the rota, select <strong>Visit import</strong>.</li>
+      <li data-screen="/imports">Rows under <strong>Quarantine</strong> were held back, each with its reasons.</li>
+      <li data-screen="/imports">Select <strong>The row as the file had it</strong> to see a row exactly as it came.</li>
+    </ol>
+  </div>
+  <div class="guide-task" id="coordinator-referral">
+    <h3>Confirm a new client's referral</h3>
+    <ol class="steps">
+      <li data-screen="/referrals">Select <strong>Referrals</strong>, then a referral marked <strong>To confirm</strong>.</li>
+      <li data-screen="/referrals/{referral_id}">Check each ticked box against its highlighted quote. Untick anything the referral does not say.</li>
+      <li data-screen="/referrals/{referral_id}">An option marked <strong>Not stated: ask the referrer</strong> is a question, not a no.</li>
+      <li data-screen="/referrals/{referral_id}">Tick <strong>I have asked the referrer</strong>, then select <strong>Confirm this profile</strong>.</li>
+      <li data-screen="/referrals/{referral_id}"><strong>Who may go</strong> now lists each visit's rules and the carers who may go.</li>
+    </ol>
+  </div>
+  <div class="actions"><a class="button secondary" href="/signin#role-coordinator">Start as the coordinator</a></div>
+</section>
+
+<section class="card" id="about-ai" aria-labelledby="about-ai-title">
+  <h2 id="about-ai-title">About the AI</h2>
+  <div class="guide-task">
+    <h3>What it does</h3>
+    <ul class="steps">
+      <li>AI reads each carer's note for safeguarding concerns, signs that someone's health is getting worse, and missed tasks. It also reads each new referral into a draft profile.</li>
+      <li>Every finding and claim quotes the words it rests on, and the app checks that those words are really there. A person decides each one. AI never decides anything alone.</li>
+      <li>The AI is Gemma 4 26B A4B, an open model from Google. It runs on a separate computer, never in this online service.</li>
+      <li>In this demo, notes you write are not read by AI. The safeguarding lead sees them as <strong>Not checked by AI yet</strong>.</li>
+    </ul>
+  </div>
+  <div class="guide-task">
+    <h3>How well it did</h3>
+    <ul class="steps">
+      <li>On 177 made-up notes it had not seen before, it found 59 of the 60 that needed action the same day. Of the 86 notes it marked that way, 59 were right, so a person checks every one.</li>
+      <li>On made-up referrals, it found each item in at least 95% of the referrals that state it, except two visits: lunch (86 of 91) and tea (42 of 47).</li>
+    </ul>
+  </div>
+  <div class="guide-task">
+    <h3>Its limits, and the checks around it</h3>
+    <ul class="steps">
+      <li>It was tested only on made-up writing. A quote shows that the words are there, not that they mean the concern.</li>
+      <li>A random 7% of notes with no finding go to the lead too, so a person sees what AI misses.</li>
+      <li>A separate small checker looks for notes that seem to give the software instructions. It can only add a note to review, never remove one.</li>
+      <li>The manager's list comes from a simple statistical model, not the AI above. It learned from a made-up workforce built from Skills for Care's 2026 figures, and the effects of the rota are assumed. It supports a conversation and never decides anything about a person.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="know-title">
+  <h2 id="know-title">Good to know</h2>
+  <ul class="steps">
+    <li>The demo is set at 12:30 on Sunday 8 November 2026. The carer's day follows that time.</li>
+    <li>On a phone, you can add the carer app to your home screen from the browser's menu.</li>
+    <li>Every person, client and note is synthetic.</li>
+  </ul>
+</section>
+{% endblock %}

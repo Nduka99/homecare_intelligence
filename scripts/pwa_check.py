@@ -234,6 +234,16 @@ def main() -> int:
                 fresh_form = "Add to your note" in form_text
             results.append(("offline as used: a written visit's form is current", fresh_form,
                             form_text[:60]))  # fmt: skip
+            # A page the phone never saved (an earlier day) shows the app's own page, styled
+            # and with a way back, not the browser's error or bare text.
+            fresh_page.goto(f"{url}/today?day=20")
+            kind = fresh_page.evaluate("() => document.contentType")
+            heading = fresh_page.locator("h1").all_inner_texts()
+            links = fresh_page.get_by_role("link", name="Your visits")
+            back = links.first.get_attribute("href") if links.count() == 1 else None
+            not_saved = kind == "text/html" and heading == ["No signal"] and back == "/today"
+            results.append(("offline: a page not saved shows the app's page", not_saved,
+                            f"{kind} {heading} {back}"))  # fmt: skip
             fresh.set_offline(False)
             fresh.close()
 

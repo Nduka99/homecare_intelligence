@@ -251,6 +251,6 @@ def test_unread_notes_come_first_numbered_through_and_counted(tmp_path: Path) ->
     page = client.get(f"/queue?day={LAST_DAY}").text
     numbers = [int(n) for n in re.findall(r'<span class="num">(\d+)</span>', page)]
     assert numbers == list(range(1, len(numbers) + 1))  # numbered through, unread first
-    assert page.index("Not yet read by the model") < page.index("Act today")
+    assert page.index("Not checked by AI yet") < page.index("Act today")
     tally = re.search(r"<strong>(\d+)</strong> notes? to decide", page)
     assert tally and int(tally.group(1)) == len(numbers)

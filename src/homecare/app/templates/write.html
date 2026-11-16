@@ -31,7 +31,7 @@
     <h2><label for="body">{{ "Your addition" if amends else "Your note" }}</label></h2>
     {% if amends %}<p class="hint">A care record is never changed. What you write here is added to your note, with the time it arrives.</p>{% endif %}
     <p class="hint" id="body-hint">Write what you did, how the person seemed, and anything new or worrying, in your own words.</p>
-    {% if demo %}<p class="notice caution">This is a public demo: do not type real information. It is deleted when the service restarts.</p>{% endif %}
+    {% if demo %}<p class="notice caution">This is a demo: do not type real information. It is cleared when the demo restarts.</p>{% endif %}
     {% if message %}<p class="alert" role="alert" id="body-error">{{ message }}</p>{% endif %}
     <div class="field">
       <textarea id="body" name="body" rows="9" maxlength="{{ longest }}" required aria-describedby="body-hint{% if message %} body-error{% endif %}"{% if message %} aria-invalid="true"{% endif %}>{{ body }}</textarea>

@@ -32,9 +32,9 @@
     {% block main %}{% endblock %}
   </main>
   <footer class="footer">
-    <p><strong>SYNTHETIC data:</strong> no real person, client, carer or provider.{% if demo %} Demo mode: anyone may take any role, and everything resets when the service restarts.{% endif %}</p>
+    <p><strong>SYNTHETIC data:</strong> no real person, client, carer or provider.{% if demo %} This is a demo: take any role. What you do is seen only by you, and is cleared when the demo restarts.{% endif %}</p>
+    {% if demo %}<p><a href="/guide">How to use this demo</a></p>{% endif %}
     <p>Companion project: <a href="https://reader.ndukanwagbo.com">Care inspection reader</a>, the same note-reading method tested on real inspection reports.</p>
-    <p>Build {{ build }}</p>
   </footer>
   {% block scripts %}{% endblock %}
 </body>

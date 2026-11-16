@@ -6,7 +6,7 @@
 {% block main %}
 <div class="page-head">
   <h1>Review register</h1>
-  <p class="sub">{{ current_day.long }} · demo week</p>
+  <p class="sub">{{ current_day.long }}</p>
   {{ days(week, day, link) }}
 </div>
 {% set first = (register.unread + (register.sections | map(attribute="rows") | sum(start=[]))) | rejectattr("decided") | first %}
@@ -15,7 +15,7 @@
     <div class="card">
       <h2 id="day-title">This day</h2>
       <p class="tally"><span><strong>{{ register.to_decide }}</strong> {{ "note" if register.to_decide == 1 else "notes" }} to decide</span> <span><strong>{{ register.decided }}</strong> decided</span></p>
-      <p class="lead-in">In the order to review them: notes the model has not read yet, then act today, act this visit, random checks of notes with no finding, and possible tampering.</p>
+      <p class="lead-in">In the order to review them: notes AI has not checked yet, then act today, act this visit, random checks of notes with no finding, and possible tampering.</p>
       {% if first %}
       <div class="actions"><a class="button primary" href="/notes/{{ first.note }}">Open the first note to decide</a></div>
       {% elif register.sections or register.unread %}

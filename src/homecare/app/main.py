@@ -31,6 +31,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.datastructures import MutableHeaders
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from homecare.app import auditlog, auth, db, importer, maps, screens, seed
@@ -39,8 +40,8 @@ TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 STATIC = Path(__file__).parent / "static"
 # Windows does not know the web app manifest's type; browsers expect it.
 mimetypes.add_type("application/manifest+json", ".webmanifest")
-# The commit the image was built from (scripts/cluster.py passes it in), so the live site can be
-# matched to a build; "local" when it is not given.
+# The commit the image was built from (scripts/cluster.py passes it in). Only /healthz reports it,
+# so the live site can be matched to a build; "local" when it is not given.
 BUILD = os.environ.get("GIT_COMMIT", "local")[:12]
 ACCOUNTS_FOLDER = Path("data") / "platform"
 # Scripts only from this site (the carer app and its service worker), never inline; Trusted
@@ -71,6 +72,10 @@ REFUSED_PROFILE = {
     "referrer.",
     "not asked": "Not saved: options the referral does not state would be saved as not needed. "
     "Ask the referrer, then tick “I have asked the referrer”.",
+}
+HTTP_ERRORS = {
+    404: ("Page not found", "There is no page at this address."),
+    405: ("This page cannot be opened this way", "Open it from a link or button in the app."),
 }
 SIGNIN_MESSAGES = {
     "wrong": "Wrong username or password.",
@@ -184,15 +189,16 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
     if demo:
         # The committed SYNTHETIC export, through the same checks as any import.
         connection = db.connect(path)
-        loaded = importer.store(connection, importer.sample(), importer.SAMPLE.name, "demo start",
+        loaded = importer.store(connection, importer.sample(), importer.SAMPLE.name, "the system",
                                 importer.reference(demo_week))  # fmt: skip
         auditlog.record(connection, settings["key"], settings["anchor"],
-                        {"at": time.time(), "event": "import", "user": "demo start",
+                        {"at": time.time(), "event": "import", "user": "the system",
                          "sha256": loaded["sha256"], "kept": loaded["kept"],
                          "quarantined": loaded["quarantined"]})  # fmt: skip
         connection.close()
 
-    app = FastAPI(title="Home-care intelligence (synthetic data)", version="0.1.0")
+    # No API documentation pages: the app is a website, and the route list is not for visitors.
+    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     # The route sketch is up to about 100 KB of SVG; compressed, it suits a phone on a weak
     # signal. BREACH needs another site to make the browser send guesses with the user's
@@ -208,7 +214,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
     def page(request: Request, name: str, context: dict[str, Any]) -> HTMLResponse:
         # When the page was made, so a copy saved on a carer's phone can say how old it is.
         rendered = datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
-        base = {"build": BUILD, "demo": demo, "rendered": rendered}
+        base = {"demo": demo, "rendered": rendered}
         return TEMPLATES.TemplateResponse(request, name, base | context)
 
     def to(url: str, token: str | None = None) -> RedirectResponse:
@@ -261,6 +267,11 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             return response
         finally:
             connection.close()
+
+    @app.get("/guide", response_class=HTMLResponse)
+    def guide(request: Request) -> HTMLResponse:
+        """How to use the demo, one section per role. Public, so a visitor reads it first."""
+        return page(request, "guide.html", {})
 
     @app.post("/signin")
     def signin(request: Request, fields: FormFields) -> Response:
@@ -329,10 +340,29 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         response.status_code = 403
         return response
 
-    def problem(request: Request, status: int, title: str, message: str, back: str) -> HTMLResponse:
+    def problem(
+        request: Request, status: int, title: str, message: str, back: str, back_label: str = ""
+    ) -> HTMLResponse:
         """A refusal as a page: what happened, and the way back, never bare text."""
-        response = page(request, "problem.html", {"title": title, "message": message, "back": back})
+        context = {"title": title, "message": message, "back": back, "back_label": back_label}
+        response = page(request, "problem.html", context)
         response.status_code = status
+        return response
+
+    @app.exception_handler(StarletteHTTPException)
+    def http_error(request: Request, error: StarletteHTTPException) -> HTMLResponse:
+        """An unknown address or a wrong method gets a page like every other, never JSON."""
+        title, message = HTTP_ERRORS.get(error.status_code, HTTP_ERRORS[404])
+        return problem(request, error.status_code, title, message, "/", "Go to your start page")
+
+    @app.exception_handler(Exception)
+    def server_error(request: Request, error: Exception) -> HTMLResponse:
+        """A fault shows a page that names nothing inside the app. Starlette answers it outside
+        the middleware, so the security headers are added here."""
+        message = "This page could not be shown. Try again in a moment."
+        title = "Something went wrong"
+        response = problem(request, 500, title, message, "/", "Go to your start page")
+        response.headers.update(HEADERS)
         return response
 
     def expired(request: Request, back: str) -> HTMLResponse:
@@ -407,7 +437,6 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 "register": screens.register(connection, detail["day"], visitor_of(request))
                 if reviewer
                 else None,
-                "extraction": demo_week["extraction"],
                 "long_date": screens.week(demo_week["start"], [detail["day"]])[0]["long"],
                 "choose": choose == "1",
                 "nothing_missed": screens.NOTHING_MISSED,
@@ -758,7 +787,6 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             "csrf": session["csrf"],
             "referral": detail,
             "referrals": screens.referral_list(connection, visitor),
-            "reader": referral_data["reader"],
             "message": message,
         }
         return page(request, "referral.html", context)

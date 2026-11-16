@@ -80,8 +80,11 @@ under [Settings](#settings).
 
 ### The live demo
 
-A copy runs at <https://care.ndukanwagbo.com> while the author's laptop is on. It is the same
-container image in demo mode, on a small Kubernetes cluster on the laptop (below), reached through
+A copy runs at <https://care.ndukanwagbo.com> while the author's laptop is on. New to it? Start
+with [how to use this demo](https://care.ndukanwagbo.com/guide): short steps for each role, and
+three things to try in five minutes. The guide is checked against the app: every screen needs a
+step in it, and every button it names must be on a screen (`tests/test_guide.py`). The demo is the
+same container image in demo mode, on a small Kubernetes cluster on the laptop (below), reached through
 a Cloudflare tunnel: the laptop connects out to Cloudflare, so no port is opened and nothing
 listens on the home network. To run your own the simple way, create a tunnel with `cloudflared`,
 put its `config.yml` (pointing at `http://app:8000`) and key file in `~/.cloudflared/homecare`,
@@ -261,8 +264,8 @@ uv run homecare referrals match draft.json
   - In two of those referrals the writing model turned "QDS calls" (four a day) into an invented
     name, so they ask for no visit. The rest give only a count of calls inside an unpunctuated
     message.
-  - Every other item is found in at least 96% of the referrals that state it, and precision is
-    at least 0.93 for every item.
+  - Every other item is found in at least 95% of the referrals that state it (the lowest is end
+    of life, 22 of 23), and precision is at least 0.93 for every item.
   - If every draft were accepted unchanged, 2 of the 477 visits would offer a carer without a
     needed skill: one missed end-of-life need. The person checking the draft is the safeguard. A
     missed rule still shows as "not stated, ask the referrer".

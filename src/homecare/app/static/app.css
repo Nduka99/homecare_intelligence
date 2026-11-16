@@ -516,14 +516,7 @@ mark {
 .ref { margin-left: 0.1em; font-size: 0.75em; font-weight: 700; }
 
 .provenance { margin-top: 1rem; color: var(--ink-2); font-size: 0.875rem; }
-.provenance summary {
-  display: inline-flex;
-  align-items: center;
-  min-height: 3rem;
-  color: var(--link);
-  cursor: pointer;
-}
-.provenance code { font-size: 0.8125rem; overflow-wrap: anywhere; }
+a[href="/guide#about-ai"] { white-space: nowrap; } /* "About the AI" stays on one line */
 
 /* A finding is a card with its own decision; a fieldset keeps the radios grouped for
    screen readers, and its legend floats so it lays out like any heading. */
@@ -848,6 +841,15 @@ textarea { display: block; resize: vertical; line-height: 1.6; }
 .cells div { min-width: 0; }
 .cells dt { color: var(--ink-2); font-size: 0.875rem; }
 .cells dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+/* The guide: each role's tasks as short numbered steps, with the words to select in bold. */
+.steps { display: grid; gap: 0.5rem; max-width: 68ch; margin: 0.5rem 0 0; padding-left: 1.5rem; }
+.steps li { padding-left: 0.25rem; }
+.steps li::marker { color: var(--ink-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+.guide-task { margin-top: 1rem; }
+.guide-task + .guide-task { padding-top: 1rem; border-top: 1px solid var(--line); }
+.guide-task h3 { font-size: 1rem; }
+.guide-role > .actions { margin-top: 1.25rem; }
 
 /* Motion: pages change like an app's screens. The bar holds; the content cross-fades. */
 @media (prefers-reduced-motion: no-preference) {

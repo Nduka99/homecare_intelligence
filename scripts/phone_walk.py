@@ -2,9 +2,11 @@
 
     uv run python scripts/phone_walk.py https://care.example.org <screenshot folder>
 
-The steps follow the operating guide's acceptance tests. The carer signs in, writes a note with no
-signal, sends it once when signal returns, adds to a note and signs out. The lead finds each note
-stored exactly once, and the manager's and coordinator's screens open without sideways scroll.
+The steps follow the operating guide's acceptance tests. The visitor first opens the user guide
+from the sign-in page and follows its link back to the carer's sign-in. The carer signs in,
+writes a note with no signal, sends it once when signal returns, adds to a note and signs out.
+The lead finds each note stored exactly once, and the manager's and coordinator's screens open
+without sideways scroll.
 In demo mode every visitor gets their own copy of the demo, so the two notes it writes reach no
 one else.
 
@@ -77,6 +79,13 @@ def carer(page: Page, context: BrowserContext, link: str, shots: Path) -> None:
     page.goto(link)
     report(page.url.endswith("/signin"), "the link opens the sign-in page", page.url)
     shot(page, shots, "01-signin")
+    page.get_by_role("link", name="how to use this demo").first.tap()
+    page.wait_for_url("**/guide")
+    report("Start as a carer" in page.inner_text("body"), "the guide opens from sign-in")
+    report(no_sideways_scroll(page), "the guide: no sideways scroll")
+    shot(page, shots, "01-guide")
+    page.get_by_role("link", name="Start as a carer").tap()
+    page.wait_for_url("**/signin#role-carer")
     page.get_by_label("Carer").select_option(CARER)
     page.get_by_role("button", name="Sign in as this carer").tap()
     page.wait_for_url("**/today")
@@ -159,7 +168,9 @@ def lead(page: Page, context: BrowserContext, link: str, shots: Path) -> None:
     page.get_by_role("button", name="Sign in as the safeguarding lead").tap()
     page.wait_for_url("**/queue**")
     unread = page.locator("#band-unread").locator("xpath=..").inner_text()
-    report("Not yet read" in unread, "the lead sees the carer's notes as not yet read", unread)
+    report(
+        "Not checked by AI yet" in unread, "the lead sees the carer's notes as not checked", unread
+    )
     report(no_sideways_scroll(page), "the register: no sideways scroll")
     shot(page, shots, "06-register")
     links = page.locator("ol[aria-labelledby='band-unread'] a")

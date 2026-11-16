@@ -10,7 +10,7 @@
 {{ offline_line() }}
 <div class="page-head">
   <h1>Your visits</h1>
-  <p class="sub">{{ current.long }}{% if sheet.visits %} · <span class="tally-line">{% if is_today %}Demo clock <span class="figure">{{ now }}</span> · {% endif %}<span class="figure">{{ sheet.written }}</span> of <span class="figure">{{ sheet.visits | length }}</span> visits written up</span>{% endif %}</p>
+  <p class="sub">{{ current.long }}{% if sheet.visits %} · <span class="tally-line">{% if is_today %}<span class="figure">{{ now }}</span> · {% endif %}<span class="figure">{{ sheet.written }}</span> of <span class="figure">{{ sheet.visits | length }}</span> visits written up</span>{% endif %}</p>
 </div>
 
 {# What to do now first, then the week, the route and every visit. On a laptop the route sits

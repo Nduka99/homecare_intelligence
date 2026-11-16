@@ -15,28 +15,22 @@
   {{ coordinator_nav("referrals") }}
   <a class="back narrow-only" href="/referrals">{{ icon("back") }}Referrals</a>
   <h1>{{ referral.name }}</h1>
-  <p class="sub">Referral · {% if referral.decision %}confirmed by {{ referral.decision.by }}, <span class="figure">{{ referral.decision.at }}</span> UTC{% else %}a draft to confirm{% endif %}</p>
+  <p class="sub">Referral · {% if referral.decision %}confirmed by {{ referral.decision.by }}, <span class="figure">{{ referral.decision.at }}</span>{% else %}a draft to confirm{% endif %}</p>
 </div>
 
 <section class="card" aria-labelledby="text-title">
   <h2 id="text-title">The referral</h2>
   <p class="entry keeps-lines">{% for run in referral.segments %}{% if run.findings %}<mark>{{ run.text }}</mark>{% if run.ends %}<sup class="ref">{{ run.ends | join(",") }}</sup>{% endif %}{% else %}{{ run.text }}{% endif %}{% endfor %}</p>
-  <div class="provenance">
-    <p>Highlighted words are the {{ referral.quotes }} quotes the model's claims rest on, each found in this referral. Read on the laptop by {{ reader.model }}, pipeline {{ reader.pipeline }}.</p>
-    <details>
-      <summary>Run details</summary>
-      <p>Prompt SHA-256 <code>{{ reader.prompt }}</code><br>Model file SHA-256 <code>{{ reader.sha256 }}</code></p>
-    </details>
-  </div>
+  <p class="provenance">Highlighted words are the {{ referral.quotes }} quotes the AI's claims rest on, each found in this referral. AI can be wrong: check each claim. <a href="/guide#about-ai">About the AI</a></p>
   {% if referral.dropped %}
-  <p class="notice caution">The model also claimed {{ referral.dropped | join(", ") }}, but the words it quoted are not in the referral, so {{ "that claim was" if referral.dropped | length == 1 else "those claims were" }} dropped. Check the referral yourself.</p>
+  <p class="notice caution">The AI also suggested {{ referral.dropped | join(", ") }}, but the words it quoted are not in the referral, so {{ "that claim was" if referral.dropped | length == 1 else "those claims were" }} left out. Check the referral yourself.</p>
   {% endif %}
 </section>
 
 <form method="post" action="/referrals/{{ referral.id }}/decisions">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <h2 class="section-title" id="profile-title">The profile</h2>
-  <p class="lead-in">{% if referral.decision %}The profile you confirmed. Change it and confirm again: each confirmation is kept.{% else %}Filled from the model's read. Check each claim against its quote. A field the referral does not state is a question for the referrer, not a no.{% endif %}</p>
+  <p class="lead-in">{% if referral.decision %}The profile you confirmed. Change it and confirm again: each confirmation is kept.{% else %}Filled in by AI. Check each claim against its quote. A field the referral does not state is a question for the referrer, not a no.{% endif %}</p>
   {% if message %}<p class="alert" role="alert" id="form-error">{{ message }}</p>{% endif %}
 
   <fieldset class="card finding">
@@ -51,7 +45,7 @@
 
   <fieldset class="card finding"{% if referral.conflict %} aria-describedby="gender-conflict"{% endif %}>
     <legend><span class="finding-title"><span class="label">Carers for personal care</span></span></legend>
-    {% if referral.conflict %}<p class="notice caution" id="gender-conflict">The model read a request for women and a request for men. Choose one, and ask the referrer if the referral is unclear.</p>{% endif %}
+    {% if referral.conflict %}<p class="notice caution" id="gender-conflict">The AI read a request for women and a request for men. Choose one, and ask the referrer if the referral is unclear.</p>{% endif %}
     <div class="choices">
       {% for value, label in referral.genders.items() %}
       <label class="choice"><input type="radio" name="gender" value="{{ value }}" required{% if referral.gender == value %} checked{% endif %}> {{ label }}</label>
@@ -82,15 +76,15 @@
 <section id="who" aria-labelledby="who-title">
   <h2 class="section-title" id="who-title">Who may go</h2>
   {% if referral.matching is none %}
-  <p class="card empty">Confirm the profile to see who may go. Matching uses only a profile a person has confirmed, never the model's read.</p>
+  <p class="card empty">Confirm the profile to see who may go. Matching uses only a profile a person has confirmed, never the AI's draft.</p>
   {% else %}
-  <p class="notice" role="status">Confirmed by {{ referral.decision.by }}, <span class="figure">{{ referral.decision.at }}</span> UTC. Matching below uses this profile.</p>
-  <p class="lead-in">From the profile confirmed by {{ referral.decision.by }}, by the planner's own rules, among the demo agency's {{ referral.carer_count }} carers.</p>
+  <p class="notice" role="status">Confirmed by {{ referral.decision.by }}, <span class="figure">{{ referral.decision.at }}</span>. Matching below uses this profile.</p>
+  <p class="lead-in">From the profile confirmed by {{ referral.decision.by }}, by the planner's own rules, among the agency's {{ referral.carer_count }} carers.</p>
   <ul class="list held">
     {% for v in referral.matching %}
     <li>
       <p><strong>{{ v.visit }}</strong> visit, <span class="figure window">{{ v.window }}</span></p>
-      <p class="reasons">{{ ("Skills: " ~ (v.skills | join(", "))) if v.skills else "No particular skill" }}{% if v.two_carers %} · two carers, paired by hand (the planner does not pair carers yet){% endif %}</p>
+      <p class="reasons">{{ ("Skills: " ~ (v.skills | join(", "))) if v.skills else "No particular skill" }}{% if v.two_carers %} · two carers: pair them by hand{% endif %}</p>
       {% for line in v.why %}<p class="reasons">{{ line | capitalize }}</p>{% endfor %}
       {% if v.carers %}
       <details class="row-cells">

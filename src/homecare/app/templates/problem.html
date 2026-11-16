@@ -4,6 +4,6 @@
 <div class="card">
   <h1>{{ title }}</h1>
   <p class="lead-in">{{ message }}</p>
-  <div class="actions"><a class="button secondary" href="{{ back }}">Go back</a></div>
+  <div class="actions"><a class="button secondary" href="{{ back }}">{{ back_label or "Go back" }}</a></div>
 </div>
 {% endblock %}

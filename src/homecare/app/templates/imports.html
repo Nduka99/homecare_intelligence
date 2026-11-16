@@ -10,13 +10,13 @@
 </div>
 <p class="lead-in">An old care system's export of visits, checked row by row against the plan before anything is used. A row that cannot be trusted is held in quarantine with its reasons, never repaired by guessing; fix it in the old system and export again. A row that can be used but needs a look is kept with a flag.</p>
 {% if not report %}
-<p class="card empty">No export has been imported yet. On the laptop: <code>homecare platform import FILE</code>.</p>
+<p class="card empty">No visit export has been imported yet.</p>
 {% else %}
 <section class="card" aria-labelledby="file-title">
   <h2 id="file-title">The file</h2>
   <dl class="details">
-    <dt>File</dt><dd>{{ report.name }}, SHA-256 <code>{{ report.sha256[:12] }}</code></dd>
-    <dt>Imported</dt><dd><span class="figure">{{ report.imported }}</span> UTC, by {{ report.by }}</dd>
+    <dt>File</dt><dd>{{ report.name }}</dd>
+    <dt>Imported</dt><dd><span class="figure">{{ report.imported }}</span>, by {{ report.by }}</dd>
   </dl>
   <p class="tally"><span><strong>{{ report.kept }}</strong> rows kept, {{ report.flagged }} of them flagged</span> <span><strong>{{ report.quarantined }}</strong> in quarantine</span> <span><strong>{{ report.blank }}</strong> blank {{ "line" if report.blank == 1 else "lines" }} skipped</span></p>
 </section>

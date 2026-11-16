@@ -34,7 +34,7 @@ def test_the_day_shows_every_carer_working_and_every_visit_to_arrange_with_its_r
     assert team == working
     # One reason stated once, with every visit it covers listed under it.
     arrange = page.split('id="arrange-title"', 1)[1].split("</section>", 1)[0]
-    assert arrange.count("Needs two carers: the planner does not pair carers yet") == 1
+    assert arrange.count("Needs two carers: pair them by hand") == 1
     assert arrange.count("<li>") == len(unplanned) == 8
     assert f'<span class="count">{len(unplanned)}</span>' in arrange
     assert f"{len(day) - len(unplanned)} visits planned" in page

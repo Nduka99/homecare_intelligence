@@ -33,16 +33,9 @@
   <h2 id="note-title">The carer's note</h2>
   <p class="entry">{% for run in note.segments %}{% if run.findings and reviewer %}<mark>{{ run.text }}</mark>{% if run.ends %}<sup class="ref">{{ run.ends | join(",") }}</sup>{% endif %}{% else %}{{ run.text }}{% endif %}{% endfor %}</p>
   {% if reviewer and not note.read %}
-  <p class="notice caution"><strong>Not read by the model yet.</strong> The model runs only on the laptop{% if demo %}, never in this online copy{% endif %}. Read this note yourself and record anything it shows below.</p>
+  <p class="notice caution"><strong>Not checked by AI yet.</strong> Read this note yourself and record anything it shows below.</p>
   {% elif reviewer %}
-  <div class="provenance">
-    {% set run = note.reading or extraction %}
-    <p>{% if note.findings %}Highlighted words are the exact quotes the model's findings rest on, each checked against this note. {% endif %}Read on the laptop by {{ run.model }}, pipeline {{ run.pipeline }}.</p>
-    <details>
-      <summary>Run details</summary>
-      <p>Prompt SHA-256 <code>{{ run.prompt }}</code><br>Model file SHA-256 <code>{{ run.sha256 }}</code></p>
-    </details>
-  </div>
+  <p class="provenance">{% if note.findings %}Highlighted words are the exact quotes the AI's findings rest on, each checked against this note. AI can be wrong: you decide each finding.{% else %}Checked by AI. AI can be wrong: read the note yourself.{% endif %} <a href="/guide#about-ai">About the AI</a></p>
   {% if note.tamper %}
   <p class="notice tampering"><strong>Possible tampering.</strong> A separate checker found text in this note that looks like an instruction to the software. This tag only adds the note to review; read the note as written.</p>
   {% endif %}
@@ -54,16 +47,16 @@
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <h2 class="section-title" id="findings-title">Findings and your decision</h2>
   {% if not note.read %}
-  <p class="card empty">The model has not read this note, so there are no findings yet. Read it and record anything it shows below.</p>
+  <p class="card empty">AI has not checked this note, so there are no findings yet. Read it and record anything it shows below.</p>
   {% elif not note.findings %}
-  <p class="card empty">The model found nothing in this note. It is here as a {{ "random check" if "random check of a note with no finding" in note.reasons else "possible tampering check" }}: read it and record anything it missed below.</p>
+  <p class="card empty">AI found nothing in this note. It is here as a {{ "random check" if "random check of a note with no finding" in note.reasons else "possible tampering check" }}: read it and record anything AI missed below.</p>
   {% endif %}
   {% for f in note.findings %}
   <fieldset class="card finding">
     <legend><span class="finding-title"><span class="label">Finding {{ f.number }}: {{ f.category }}</span>{{ band_tag(f.band) }}</span></legend>
     <p class="quote"><mark>“{{ f.quote }}”</mark></p>
     {% for reason in f.reasons %}<p class="why">{{ reason }}</p>{% endfor %}
-    <p class="read">Found by {{ f.read_label }}{% if f.members | length > 1 %}, as {{ f.members | length }} overlapping quotes of one concern{% endif %}.{% if f.sentence_only %} <span class="flag">Read without the rest of the note: check the context above.</span>{% endif %}</p>
+    {% if f.sentence_only %}<p class="read"><span class="flag">Found in this sentence on its own: check it against the whole note above.</span></p>{% endif %}
     <div class="choices" role="radiogroup" aria-label="Your decision on finding {{ f.number }}">
       {% for label in ["confirmed", "wrong category", "not a concern"] %}
       <label class="choice"><input type="radio" name="finding-{{ f.id }}" value="{{ label }}"{% if f.decision and f.decision.label == label %} checked{% endif %}> {{ label | capitalize }}</label>
@@ -81,7 +74,7 @@
   {% endfor %}
 
   <section class="card" aria-labelledby="missed-title">
-    <h2 id="missed-title">Anything the model missed</h2>
+    <h2 id="missed-title">Anything the AI missed</h2>
     {% if choose %}<p class="alert" role="alert" id="missed-error">Not saved: this note has no finding, so record your own read of it here.</p>{% endif %}
     <div class="field">
       <label for="missed">{{ "Your read of the whole note (required)" if not note.findings else "A concern this note shows that no finding names" }}</label>

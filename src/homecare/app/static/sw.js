@@ -22,6 +22,29 @@ const SHELL = [
 ];
 const PAGES = [/^\/today$/, /^\/visits\/[^/]+\/note$/];
 const ONE_TIME = ["sent"]; // query parameters that carry a message for one load only
+/* What the carer sees for a page that is not saved, instead of the browser's own error: fixed
+   markup, styled by the saved stylesheet, saying SYNTHETIC like every screen. */
+const NOT_SAVED = `<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>No signal · Home-care intelligence (synthetic)</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<main id="main" class="page">
+<div class="card">
+<h1>No signal</h1>
+<p class="lead-in">This page is not saved on this phone. Open it again when you have signal.</p>
+<div class="actions"><a class="button secondary" href="/today">Your visits</a></div>
+</div>
+</main>
+<footer class="footer"><p><strong>SYNTHETIC data:</strong> no real person, client, carer or provider.</p></footer>
+</body>
+</html>
+`;
 /* The address a page is saved under: the one-time parameters removed. */
 function canonical(url) {
     const clean = new URL(url.href);
@@ -72,9 +95,9 @@ async function networkFirst(request) {
         if (kept && (!page || savedToday(kept))) {
             return kept;
         }
-        return new Response("No signal, and this page is not saved on this phone.", {
+        return new Response(NOT_SAVED, {
             status: 503,
-            headers: { "Content-Type": "text/plain; charset=utf-8" },
+            headers: { "Content-Type": "text/html; charset=utf-8" },
         });
     }
 }
