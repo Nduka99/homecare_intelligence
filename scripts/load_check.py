@@ -16,7 +16,8 @@ the app stops. The container listens on 127.0.0.1 only and is removed at the end
    from 60; the health check, asked every second, answers in 0.25 s for 99% of asks; the
    container's peak memory stays under 384 MiB (75% of its limit) and /tmp under 64 MiB; after
    the ramp the database passes SQLite's integrity check, holds exactly the notes the visitors
-   were told were sent, and a whole journey takes under 5 s.
+   were told were sent, and a whole journey takes under 5 s. Each step also prints the requests
+   it served per second, to compare one version's capacity with another's, run back to back.
 2. Fill and reset: visitors send the longest notes until the demo's storage is full. Passes
    when the note at the budget gets the "demo is restarting" page, the container restarts once,
    answers again within 30 s with a fresh demo (no notes from visitors), no answer was 500 or
@@ -283,7 +284,8 @@ def ramp() -> None:
         report(
             not tally.failures and p95 <= limit,
             f"{count} visitors",
-            f"served {len(tally.served)}, turned away {tally.turned_away}, p95 {p95:.2f} s "
+            f"served {len(tally.served)} ({len(tally.served) / STEP_SECONDS:.1f} per second), "
+            f"turned away {tally.turned_away}, p95 {p95:.2f} s "
             f"(gate {limit} s), failures {len(tally.failures)} {tally.failures[:3]}; "
             + tally.slowest(),
         )

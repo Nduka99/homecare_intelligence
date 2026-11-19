@@ -6,7 +6,7 @@
 {% block main %}
 {{ offline_line() }}
 <div class="page-head">
-  <a class="back" href="/today?day={{ visit.day }}">{{ icon("back") }}Your visits</a>
+  <a class="back" href="{{ back }}">{{ icon("back") }}Your visits</a>
   <h1>{{ "Add to your note" if amends else "Write the note" }}</h1>
   <p class="sub">{{ visit.client }} · {{ visit.visit }} visit, {{ visit.long_date }}</p>
 </div>

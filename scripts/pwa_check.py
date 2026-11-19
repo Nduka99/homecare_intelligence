@@ -17,6 +17,13 @@
    without signal the sketch shows. Sabotage: no per-tile referrer policy; a stored tile.
 6. A signal check leaves no request open past its 5 s limit. Sabotage: the app without its body
    read.
+7. The phone keeps the current day only: pages saved a demo day earlier are gone once the
+   clock moves on and the start page loads.
+8. Signed out by the server (as when a session expires): the next load removes every saved page,
+   so none opens without signal, but keeps the carer's drafts.
+9. Measured, not checked: the pages a carer's phone keeps after opening today's sheet, after
+   opening each day's sheet once, and after a week of use (each day's sheet opened on that
+   day), read back from the browser's own storage, and how many clients they name.
 
 A sabotage switches one protection off, and the same check must then fail, so a check that
 cannot fail is caught.
@@ -25,6 +32,8 @@ Laptop only (the Chromium build Playwright 1.63 uses): `uv run python scripts/pw
 Exits 1 if any check fails.
 """
 
+import re
+import sqlite3
 import struct
 import sys
 import tempfile
@@ -53,6 +62,21 @@ LEFT_ON_PHONE = """async () => ({
     caches: (await caches.keys()).length,
     databases: (await indexedDB.databases()).length,
     workers: (await navigator.serviceWorker.getRegistrations()).length })"""
+NOTHING_LEFT = {"caches": 0, "databases": 0, "workers": 0}
+# How many drafts the carer app keeps on the phone (its IndexedDB store).
+DRAFTS = """() => new Promise((resolve) => { const opening = indexedDB.open('carer-drafts');
+    opening.onerror = () => resolve(-1);
+    opening.onsuccess = () => { const database = opening.result;
+      if (!database.objectStoreNames.contains('drafts')) { resolve(0); return; }
+      const counting = database.transaction('drafts').objectStore('drafts').count();
+      counting.onsuccess = () => resolve(counting.result); }; })"""
+SAVED_PAGES = """async () => { const found = {};
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) {
+        if (!request.url.includes('/static/')) {
+          found[request.url] = await (await cache.match(request)).text(); } } }
+    return found; }"""
 
 
 def carers_with_work(folder: Path) -> list[tuple[str, str]]:
@@ -178,6 +202,42 @@ def signal_checks(context: BrowserContext, url: str) -> tuple[int, list[str]]:
     return len(finished), failed
 
 
+def saved_pages(page: Page) -> dict[str, str]:
+    """Every page saved on the phone, by address, once the worker has stopped saving."""
+    kept: dict[str, str] = {}
+    for _ in range(20):
+        page.wait_for_timeout(1000)
+        now: dict[str, str] = page.evaluate(SAVED_PAGES)
+        if now.keys() == kept.keys():
+            break
+        kept = now
+    return kept
+
+
+def earlier_days(pages: dict[str, str], demo: dict[str, Any]) -> list[str]:
+    """The saved pages that belong to a day before the demo clock's: a note form for an earlier
+    visit, or an earlier day's sheet."""
+    day_of = {visit["id"]: visit["day"] for visit in demo["visits"]}
+    today = demo["now"]["day"]
+    found = []
+    for address in pages:
+        form = re.search(r"/visits/([^/]+)/note$", address)
+        sheet = re.search(r"/today\?day=(\d+)$", address)
+        if (form and day_of.get(form.group(1), today) < today) or (
+            sheet and int(sheet.group(1)) < today
+        ):
+            found.append(address)
+    return found
+
+
+def on_the_phone(page: Page) -> str:
+    """How many pages the phone keeps, and how many clients they name."""
+    kept = saved_pages(page)
+    names = [client["name"] for client in seed.load()["clients"]]
+    named = [name for name in names if any(name in text for text in kept.values())]
+    return f"{len(kept)} pages, naming {len(named)} clients"
+
+
 def app_notes(folder: Path) -> list[str]:
     connection = db.connect(folder / "ui.db")
     rows = connection.execute("SELECT body FROM notes WHERE source = 'app'").fetchall()
@@ -187,9 +247,10 @@ def app_notes(folder: Path) -> list[str]:
 
 def main() -> int:
     results: list[tuple[str, bool, str]] = []
+    measures: list[tuple[str, str]] = []
     with tempfile.TemporaryDirectory() as name:
         folder = Path(name)
-        url, server = start_app(folder)
+        url, server, settings = start_app(folder)
         (carer, visit), (second, _) = carers_with_work(folder)[:2]
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(args=NO_OSM)
@@ -357,6 +418,11 @@ def main() -> int:
             results.append(("sign-out while saving: no save follows a redirect",
                             bool(held) and not any(u.endswith("/signin") for u in followed),
                             f"{len(held)} saves held; worker asked for {followed}"))  # fmt: skip
+            # The held saves came back as sign-in redirects after the sign-out cleared the phone;
+            # handling them must not leave storage behind (seen on the live link, 19 Nov).
+            left = page.evaluate(LEFT_ON_PHONE)
+            results.append(("sign-out while saving: nothing left after the saves return",
+                            left == NOTHING_LEFT, str(left)))  # fmt: skip
             page.get_by_role("button", name="Sign in as the safeguarding lead").click()
             page.wait_for_url("**/queue", timeout=10_000)
             context.close()
@@ -463,10 +529,76 @@ def main() -> int:
             results.append(("signal check sabotaged: a request left open is caught", aborted != [],
                             f"{done} finished, failed {aborted}"))  # fmt: skip
             sabotaged.close()
+
+            # 7. The phone keeps the current day only. The carer's pages are saved with the demo
+            # clock a day earlier; the clock moves on and the carer loads the start page. Which
+            # day a saved page belongs to is read from its address and the seed, never from the
+            # app's own mark on it.
+            demo = seed.load()
+            now = demo["now"]
+            settings["clock"] = {"day": DAY - 1, "minute": now["minute"]}
+            context, page = signed_in(browser, url, carer)
+            before = earlier_days(saved_pages(page), demo)
+            settings["clock"] = dict(now)
+            page.goto(url + "/today")
+            after = earlier_days(saved_pages(page), demo)
+            results.append(("phone: an earlier day's pages are gone after the next load",
+                            bool(before) and not after,
+                            f"earlier pages before {len(before)}, after {len(after)}"))  # fmt: skip
+            context.close()
+
+            # 8. The server signs the carer out (the session ends there, as on expiry). The next
+            # load meets the sign-in page; the phone then keeps no saved page, and opens none
+            # without signal, but the draft written before is kept.
+            context, page = signed_in(browser, url, carer)
+            page.goto(f"{url}/visits/{visit}/note")
+            page.locator("#body").fill("A draft kept through sign-out.")
+            page.wait_for_function("document.querySelector('.draft-state').textContent.length > 0")
+            page.goto(url + "/today")
+            saved_pages(page)
+            connection = sqlite3.connect(folder / "ui.db")
+            connection.execute("DELETE FROM sessions")
+            connection.commit()
+            connection.close()
+            page.goto(url + "/today")
+            page.wait_for_url("**/signin")
+            left = saved_pages(page)
+            drafts = page.evaluate(DRAFTS)
+            # Without signal the worker answers; its own "No signal" page has a "Your visits"
+            # button, so the page's heading tells the sheet from it.
+            context.set_offline(True)
+            page.goto(url + "/today")
+            heading = page.locator("h1").all_inner_texts()
+            context.set_offline(False)
+            results.append(("phone: signed out by the server, saved pages go and drafts stay",
+                            not left and drafts >= 1 and heading == ["No signal"],
+                            f"{len(left)} pages, {drafts} drafts, offline {heading}"))  # fmt: skip
+            context.close()
+
+            # 9. What the phone keeps (measured): today's sheet; each day's sheet opened once
+            # with the clock fixed; a week of use, each day's sheet opened on that day.
+            context, page = signed_in(browser, url, carer)
+            measures.append(("phone: today's sheet opened", on_the_phone(page)))
+            for day in demo["days"]:
+                page.goto(f"{url}/today?day={day}")
+                saved_pages(page)  # the worker has finished saving this day's pages
+            measures.append(("phone: each day's sheet opened once", on_the_phone(page)))
+            context.close()
+            context, page = signed_in(browser, url, carer)
+            for day in demo["days"]:
+                settings["clock"] = {"day": day, "minute": now["minute"]}
+                page.goto(f"{url}/today?day={day}")  # named: the sheet the app opens that day
+                saved_pages(page)
+            settings["clock"] = dict(now)
+            measures.append(("phone: a week of use, each day's sheet on that day",
+                             on_the_phone(page)))  # fmt: skip
+            context.close()
             browser.close()
         server.should_exit = True
     for check, passed, detail in results:
         print(f"{'pass' if passed else 'FAIL'}  {check}  {detail}")
+    for label, value in measures:
+        print(f"measured  {label}  {value}")
     return 0 if all(passed for _, passed, _ in results) else 1
 
 

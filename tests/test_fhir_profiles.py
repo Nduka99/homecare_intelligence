@@ -45,7 +45,7 @@ def write(folder: Path, name: str, value: dict[str, Any]) -> Path:
 @pytest.fixture(scope="module")
 def results(tmp_path_factory: pytest.TempPathFactory) -> dict[str, list[dict[str, str]]]:
     folder = tmp_path_factory.mktemp("fhir")
-    found = fhir.bundle(plant(folder / "h.db"), seed.load(), CLIENT)
+    found = fhir.bundle(plant(folder / "h.db"), seed.load(), CLIENT, None)
     broken = copy.deepcopy(found)
     del resources(broken, "Encounter")[0]["status"]
     claimed = TWO_NHS_NUMBERS | {"meta": {"profile": [fhir.UK_CORE["Patient"]]}}

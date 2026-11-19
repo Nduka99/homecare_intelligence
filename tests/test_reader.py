@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 from homecare import llm
-from homecare.app import db, reader
+from homecare.app import auditlog, db, reader
 from homecare.notes import extract
 from test_screens import LAST_DAY, csrf_of, make, sign_in, visit_to_write
 
@@ -46,7 +46,11 @@ def stand_in(quote: str) -> Any:
 
 def read(tmp_path: Path) -> dict[str, list[str]]:
     connection = db.connect(tmp_path / "demo.db")
-    return reader.read_all(connection, lambda text: extract.extract("http://model", text), HEADER)
+
+    def model(text: str) -> dict[str, Any]:
+        return extract.extract("http://model", text)
+
+    return reader.read_all(connection, model, HEADER, lambda note: None)
 
 
 def test_a_concern_found_moves_the_note_into_the_register(
@@ -97,3 +101,57 @@ def test_a_failed_read_leaves_the_note_unread_and_listed(
     register = client.get(f"/queue?day={LAST_DAY}").text
     unread_section = register.split("Not checked by AI yet", 1)[1]
     assert re.search(f"/notes/{note}", unread_section)
+
+
+def test_each_model_call_carries_one_note_and_each_read_is_logged_before_the_next(
+    tmp_path: Path,
+) -> None:
+    """The model is given one note's text per call, never two, and each read is stored with its
+    audit entry before the next note is read, so a batch stopped part-way leaves no read
+    unlogged."""
+    client, settings = make(tmp_path)
+    for number in range(3):
+        visit = visit_to_write(tmp_path)
+        sign_in(client, visit["carer"])
+        token = csrf_of(client.get(f"/visits/{visit['id']}/note").text)
+        fields = {"csrf": token, "key": str(uuid.uuid4()), "body": f"Visit {number}: all well.",
+                  "amends": ""}  # fmt: skip
+        client.post(f"/visits/{visit['id']}/notes", data=fields)
+    connection = db.connect(tmp_path / "demo.db")
+    bodies = [row["body"] for row in reader.unread(connection)]
+    assert len(bodies) == 3
+    calls: list[tuple[str, int]] = []
+
+    def model_reads_logged() -> int:
+        committed = db.connect(tmp_path / "demo.db")  # what another process would see
+        count = sum(
+            1 for link in auditlog.chain(committed) if link["entry"]["event"] == "model read"
+        )
+        committed.close()
+        return count
+
+    def model(text: str) -> dict[str, Any]:
+        calls.append((text, model_reads_logged()))
+        return {"findings": []}
+
+    def logged(note: str) -> None:
+        entry = {"event": "model read", "user": "command line", "note": note}
+        auditlog.record(connection, settings["key"], settings["anchor"], entry)
+
+    done = reader.read_all(connection, model, HEADER, logged)
+    assert [text for text, _ in calls] == bodies
+    assert [count for _, count in calls] == [0, 1, 2]
+    assert model_reads_logged() == 3 and len(done["read"]) == 3
+
+
+def test_a_read_whose_audit_entry_fails_is_not_stored(tmp_path: Path) -> None:
+    _, note = written(tmp_path, "Lunch made; all well.")
+    connection = db.connect(tmp_path / "demo.db")
+
+    def broken(note: str) -> None:
+        raise RuntimeError("the audit log could not be written")
+
+    with pytest.raises(RuntimeError):
+        reader.read_all(connection, lambda text: {"findings": []}, HEADER, broken)
+    connection.close()
+    assert [row["id"] for row in reader.unread(db.connect(tmp_path / "demo.db"))] == [note]

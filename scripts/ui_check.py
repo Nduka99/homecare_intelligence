@@ -14,6 +14,7 @@ the app's own CSP is checked with nothing bypassed in `scripts/pwa_check.py`.
 """
 
 import hashlib
+import itertools
 import json
 import secrets
 import socket
@@ -48,8 +49,10 @@ def free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def start_app(folder: Path) -> tuple[str, uvicorn.Server]:
-    settings = {
+def start_app(folder: Path) -> tuple[str, uvicorn.Server, dict[str, Any]]:
+    """The app in demo mode on a free local port: its address, its server, and its settings
+    (a check moves the demo clock through `settings["clock"]`)."""
+    settings: dict[str, Any] = {
         "mode": "demo",
         "database": folder / "ui.db",
         "anchor": folder / "ui.anchor",
@@ -65,7 +68,7 @@ def start_app(folder: Path) -> tuple[str, uvicorn.Server]:
     for _ in range(100):
         try:
             urllib.request.urlopen(url + "/healthz", timeout=1)
-            return url, server
+            return url, server, settings
         except OSError:
             time.sleep(0.1)
     raise SystemExit("the app did not start")
@@ -103,10 +106,19 @@ def serve_tiles(context: BrowserContext, seen: list[dict[str, str]]) -> None:
     context.route(TILE_HOST + "**", answer)
 
 
+# Each browser is one person on their own device, with its own address, as the app's per-address
+# form limit sees them through Cloudflare; on one shared address the check's own forms would
+# reach that limit.
+ADDRESSES = itertools.count(1)
+
+
 def new_page(browser: Browser, width: int, height: int, scheme: Literal["light", "dark"]) -> Page:
     """A fresh signed-out browser at one size and colour scheme; scripts may be injected (axe)."""
     viewport: ViewportSize = {"width": width, "height": height}
-    context = browser.new_context(bypass_csp=True, viewport=viewport, color_scheme=scheme)
+    address = {"cf-connecting-ip": f"10.2.0.{next(ADDRESSES)}"}
+    context = browser.new_context(
+        bypass_csp=True, viewport=viewport, color_scheme=scheme, extra_http_headers=address
+    )
     serve_tiles(context, [])
     return context.new_page()
 
@@ -340,7 +352,7 @@ def main_check() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     report: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory() as folder:
-        url, server = start_app(Path(folder))
+        url, server, _ = start_app(Path(folder))
         connection = db.connect(Path(folder) / "ui.db")
         queue = screens.day_queue(connection, DAY, None)
         first = queue[0]["note"]
@@ -378,6 +390,24 @@ def main_check() -> int:
                     check(lead, "note-random-check", size, scheme, report)
                     lead.goto(f"{url}/notes/{tampered}")
                     check(lead, "note-tampering", size, scheme, report)
+                    # An export: asked (once refused, empty), approved by the coordinator as the
+                    # same demo visitor, then ready for the lead to download.
+                    lead.goto(url + "/exports")
+                    check(lead, "exports", size, scheme, report)
+                    lead.evaluate("document.querySelector('form[action=\"/exports\"]').submit()")
+                    check(lead, "exports-error", size, scheme, report)
+                    lead.get_by_label("Client").select_option("C45")
+                    lead.get_by_label("Why it is needed").fill("A hospital admission.")
+                    lead.get_by_role("button", name="Ask for an export").click()
+                    lead.goto(url + "/signin")
+                    lead.get_by_role("button", name="Sign in as the coordinator").click()
+                    lead.goto(url + "/exports")
+                    check(lead, "exports-approve", size, scheme, report)
+                    lead.get_by_role("button", name="Approve").click()
+                    lead.goto(url + "/signin")
+                    lead.get_by_role("button", name="Sign in as the safeguarding lead").click()
+                    lead.goto(url + "/exports")
+                    check(lead, "exports-download", size, scheme, report)
                     manager = new_page(browser, width, height, scheme)
                     manager.goto(url + "/signin")
                     manager.get_by_role("button", name="Sign in as the manager").click()
@@ -391,6 +421,21 @@ def main_check() -> int:
                     check(worker, "today", size, scheme, report)
                     worker.goto(f"{url}/queue")
                     check(worker, "forbidden", size, scheme, report)
+                    # Another day: closed, a reason refused, then opened; the same demo
+                    # visitor then sees the alert as the manager, before and after reviewing it.
+                    worker.goto(f"{url}/today?day={DAY - 2}")
+                    check(worker, "another-day", size, scheme, report)
+                    worker.get_by_label("Why you need this day").fill(" ")
+                    worker.evaluate("document.querySelector('form[action=\"/openings\"]').submit()")
+                    check(worker, "another-day-error", size, scheme, report)
+                    worker.get_by_label("Why you need this day").fill("Checking a note.")
+                    worker.get_by_role("button", name="Open another day").click()
+                    worker.goto(url + "/signin")
+                    worker.get_by_role("button", name="Sign in as the manager").click()
+                    worker.goto(f"{url}/team")
+                    check(worker, "team-alert", size, scheme, report)
+                    worker.get_by_role("button", name="Mark as reviewed").click()
+                    check(worker, "team-alert-reviewed", size, scheme, report)
                     carer_app(browser, url, width, height, scheme, size, report)
                     coordinator = new_page(browser, width, height, scheme)
                     coordinator.goto(url + "/signin")
@@ -419,7 +464,7 @@ def main_check() -> int:
     for row in report:
         print(f"{row['screen']} {row['size']} {row['scheme']}: {row['id']} ({row['impact']}) "
               f"{row['help']} {row['nodes']}")  # fmt: skip
-    screens_checked = 27 * len(SIZES) * len(SCHEMES)
+    screens_checked = 35 * len(SIZES) * len(SCHEMES)
     print(f"axe: {len(report)} violations on {screens_checked} screen captures")
     missed = CONTROL_EXPECTS - caught
     print(f"control (faint text, no language, too wide): caught {sorted(caught & CONTROL_EXPECTS)}")

@@ -61,6 +61,14 @@
   <a href="/rota"{% if current == "rota" %} aria-current="page"{% endif %}>Rota</a>
   <a href="/imports"{% if current == "imports" %} aria-current="page"{% endif %}>Visit import</a>
   <a href="/referrals"{% if current == "referrals" %} aria-current="page"{% endif %}>Referrals</a>
+  <a href="/exports"{% if current == "exports" %} aria-current="page"{% endif %}>Exports</a>
+</nav>
+{%- endmacro %}
+
+{% macro lead_nav(current) -%}
+<nav class="switch" aria-label="Safeguarding lead's pages">
+  <a href="/queue"{% if current == "queue" %} aria-current="page"{% endif %}>Review register</a>
+  <a href="/exports"{% if current == "exports" %} aria-current="page"{% endif %}>Exports</a>
 </nav>
 {%- endmacro %}
 

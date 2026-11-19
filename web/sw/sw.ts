@@ -9,10 +9,15 @@
    so a sheet opened after a Send is still found at `/today`, and a page that carries a one-time
    message is never saved (a clean copy is fetched instead). The app script asks the worker to
    save the day's pages once it is in control, so the first open of the day is covered too.
-   Signing out deletes the saved copies (Clear-Site-Data, and the app script). */
+
+   The phone keeps the current day only: the server marks each page with the demo day it was
+   served on, and saving a page removes every page saved on an earlier day. Signing out deletes
+   the saved copies (Clear-Site-Data, and the app script); so does the server signing the carer
+   out, seen as a page answered with a redirect to sign in. Drafts are never deleted that way. */
 
 const worker = self as unknown as ServiceWorkerGlobalScope;
-const CACHE = "carer-pages-1";
+const CACHE = "carer-pages-2"; // renamed when what is kept changes, so old copies go
+const DAY_HEADER = "Care-Day"; // the demo day the server served a page on
 const SHELL = [
   "/static/app.css",
   "/static/app.js",
@@ -64,16 +69,48 @@ function isPage(url: URL): boolean {
   return PAGES.some((pattern) => pattern.test(url.pathname));
 }
 
+/* The demo day a page was served on, from the server's mark; 0 when unmarked. */
+function dayOf(response: Response): number {
+  return Number(response.headers.get(DAY_HEADER)) || 0;
+}
+
+/* Keep a page, then remove every page saved on an earlier day. */
+async function keep(cache: Cache, address: string, response: Response): Promise<void> {
+  const day = dayOf(response);
+  await cache.put(address, response);
+  for (const request of await cache.keys()) {
+    const kept = isPage(new URL(request.url)) ? await cache.match(request) : undefined;
+    if (kept && dayOf(kept) < day) {
+      await cache.delete(request);
+    }
+  }
+}
+
+/* The server signed the carer out: no saved page stays on the phone. Drafts are kept. A cache
+   that sign-out has already removed is left removed: opening it would create it again. */
+async function forgetPages(): Promise<void> {
+  if (!(await caches.has(CACHE))) {
+    return;
+  }
+  const cache = await caches.open(CACHE);
+  for (const request of await cache.keys()) {
+    if (isPage(new URL(request.url))) {
+      await cache.delete(request);
+    }
+  }
+}
+
 /* Save one page under its canonical address. A page with a one-time message is fetched clean
    first, so the saved copy never shows "Your note was sent" on a later open. A redirect is never
    followed: after sign-out it leads to the sign-in page, and asking for that page in the
    background starts a second session that replaces the one the form on screen belongs to. */
 async function savePage(url: URL): Promise<void> {
-  const cache = await caches.open(CACHE);
   const address = canonical(url);
   const response = await fetch(address, { credentials: "same-origin", redirect: "manual" });
-  if (response.ok && response.type === "basic") {
-    await cache.put(address, response);
+  if (response.type === "opaqueredirect") {
+    await forgetPages();
+  } else if (response.ok && response.type === "basic") {
+    await keep(await caches.open(CACHE), address, response);
   }
 }
 
@@ -83,13 +120,18 @@ async function networkFirst(request: Request): Promise<Response> {
   const cache = await caches.open(CACHE);
   try {
     const response = await fetch(request);
-    // A redirect (to sign in) or an error is passed on, never saved.
-    if (response.ok && response.type === "basic" && !response.redirected) {
+    // A redirect (to sign in) or an error is passed on, never saved; a page answered with a
+    // redirect means the carer is signed out.
+    if (page && response.type === "opaqueredirect") {
+      await forgetPages();
+    } else if (response.ok && response.type === "basic" && !response.redirected) {
       if (page && canonical(url) !== url.href) {
         // A one-time message is on this page: save a clean copy instead, in the background.
         void savePage(url);
+      } else if (page) {
+        await keep(cache, canonical(url), response.clone());
       } else {
-        await cache.put(page ? canonical(url) : request, response.clone());
+        await cache.put(request, response.clone());
       }
     }
     return response;

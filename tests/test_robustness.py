@@ -12,6 +12,8 @@ import http.client
 import re
 import socket
 import sqlite3
+import subprocess
+import sys
 import threading
 import time
 from collections.abc import Iterator
@@ -215,6 +217,107 @@ def test_a_write_and_a_logged_view_at_the_same_moment_wait_in_line_not_in_the_da
     check.close()
 
 
+# Each copy appends its share once a "go" file appears, so the two copies start together.
+APPENDER = """
+import sys, time
+from pathlib import Path
+from homecare.app import auditlog, db
+path, anchor, go, name, count = sys.argv[1:]
+while not Path(go).exists():
+    time.sleep(0.005)
+connection = db.connect(Path(path))
+for number in range(int(count)):
+    entry = {"event": "view", "user": name, "n": number}
+    auditlog.record(connection, b"k" * 32, Path(anchor), entry)
+connection.close()
+"""
+
+
+def test_two_processes_appending_at_once_leave_one_chain_that_verifies(tmp_path: Path) -> None:
+    """A command-line tool (an import, a model read) appends to the audit log while the server
+    is appending too. The app's own lock covers one process only, so each append must hold
+    SQLite's write lock from reading the newest MAC to writing the anchor. Otherwise both
+    processes chain onto the same record, or the anchor names an older one, and the next start
+    refuses to run."""
+    path = tmp_path / "audit.db"
+    anchor = tmp_path / "audit.anchor"
+    go = tmp_path / "go"
+    connection = db.connect(path)
+    db.migrate(connection)
+    connection.close()
+    each = 100
+    # This interpreter running the fixed script above, with no shell.
+    copies = [
+        subprocess.Popen(  # noqa: S603
+            [sys.executable, "-c", APPENDER, str(path), str(anchor), str(go), name, str(each)],
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=tmp_path,
+        )
+        for name in ("server", "command line")
+    ]
+    go.touch()
+    errors = [copy.communicate(timeout=120)[1] for copy in copies]
+    assert [copy.returncode for copy in copies] == [0, 0], errors
+    check = db.connect(path)
+    assert auditlog.problems(check, b"k" * 32, anchor) == []
+    assert len(auditlog.chain(check)) == 2 * each
+    check.close()
+
+
+def test_the_anchor_names_the_new_record_before_the_commit_releases_the_write_lock(
+    tmp_path: Path,
+) -> None:
+    """Another process may append the moment this one commits. If the anchor were written after
+    the commit, that append's anchor could land first and this older one overwrite it, so the
+    anchor must already name the new record when SQLite runs the commit. (Two real processes
+    almost never hit that gap, so it is checked here directly.)"""
+    path = tmp_path / "audit.db"
+    anchor = tmp_path / "audit.anchor"
+    key = b"k" * 32
+    connection = db.connect(path)
+    db.migrate(connection)
+    auditlog.record(connection, key, anchor, {"event": "view", "user": "lead"})
+    at_commit: list[str] = []
+
+    def traced(statement: str) -> None:
+        if statement == "COMMIT":
+            at_commit.append(anchor.read_text(encoding="utf-8"))
+
+    connection.set_trace_callback(traced)
+    auditlog.record(connection, key, anchor, {"event": "view", "user": "manager"})
+    connection.set_trace_callback(None)
+    assert at_commit == [auditlog.chain(connection)[-1]["mac"]]
+    connection.close()
+
+
+def test_an_append_whose_commit_fails_leaves_the_anchor_on_the_stored_chain(
+    tmp_path: Path,
+) -> None:
+    """The anchor is written before the commit, while the write lock is held. If the commit then
+    fails (here a reader holds the database past the writer's wait), the record is rolled back
+    and the anchor must go back to the newest stored record, or the next start refuses."""
+    path = tmp_path / "audit.db"
+    anchor = tmp_path / "audit.anchor"
+    key = b"k" * 32
+    writer = db.connect(path)
+    db.migrate(writer)
+    auditlog.record(writer, key, anchor, {"event": "view", "user": "lead"})
+    reader = sqlite3.connect(path, isolation_level=None)
+    reader.execute("BEGIN")
+    reader.execute("SELECT * FROM audit").fetchall()  # holds the database open for reading
+    writer.execute("PRAGMA busy_timeout = 0")
+    with pytest.raises(sqlite3.OperationalError):
+        auditlog.record(writer, key, anchor, {"event": "view", "user": "manager"})
+    reader.execute("COMMIT")
+    reader.close()
+    assert auditlog.problems(writer, key, anchor) == []
+    assert [item["entry"]["user"] for item in auditlog.chain(writer)] == ["lead"]
+    auditlog.record(writer, key, anchor, {"event": "view", "user": "coordinator"})
+    assert auditlog.problems(writer, key, anchor) == []
+    writer.close()
+
+
 # Storage budget and restart.
 
 
@@ -229,8 +332,9 @@ def test_a_full_demo_refuses_the_write_whole_and_restarts(
     client = TestClient(main.create_app(settings), base_url="https://testserver")
     visit = visit_to_write(tmp_path)
     sign_in(client, visit["carer"])
-    # A long note needs a new page of the database file, which a full database cannot add.
-    fields = note_form(client, visit["id"]) | {"body": "Lunch made. " + "x" * 3900}
+    # The longest note (about 16 KB) needs several new pages of the database file; a full
+    # database may have a page left, never several.
+    fields = note_form(client, visit["id"]) | {"body": LONGEST_NOTE}
     # Fill the budget the way many visitors would, then send one more note.
     filler = db.connect(settings["database"], budget)
     filled = False

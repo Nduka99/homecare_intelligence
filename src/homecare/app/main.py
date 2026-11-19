@@ -39,7 +39,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import ClientDisconnect
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from homecare.app import auditlog, auth, db, importer, limits, maps, screens, seed
+from homecare import fhir
+from homecare.app import access, auditlog, auth, db, importer, limits, maps, screens, seed
 
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 STATIC = Path(__file__).parent / "static"
@@ -74,6 +75,39 @@ KEY = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 # A visitor cookie the server made: `secrets.token_urlsafe(32)`. Any other value is replaced.
 VISITOR_TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")
 LONGEST_NOTE = 4000
+# The most characters of any one value an audit entry keeps: enough for every ID the app makes,
+# while an address typed by a visitor cannot fill the log.
+LONGEST_LOGGED = 64
+# A carer's reason for opening another day: enough for a sentence or two.
+LONGEST_REASON = 500
+# The demo day a carer's page was served on, so the phone keeps the current day's pages only.
+SERVED_DAY = "Care-Day"
+# How long a coordinator has to approve a request for a client's record: a working day.
+EXPORT_SECONDS = 24 * 60 * 60
+# Why an export step is refused: its status, the page's title and its message.
+EXPORT_REFUSALS = {
+    "missing": (404, "No such request", "This request does not exist."),
+    "own": (
+        403,
+        "Someone else must approve",
+        "You asked for this file, so another person must approve it.",
+    ),
+    "approved": (409, "Already approved", "This request was approved already."),
+    "late": (
+        410,
+        "Past its deadline",
+        "This request waited more than a day. The lead can ask again.",
+    ),
+    "not yours": (403, "Not your request", "Only the person who asked can download this file."),
+    "unapproved": (403, "Not approved yet", "A coordinator must approve this request first."),
+    "downloaded": (
+        409,
+        "Already downloaded",
+        "This file was downloaded already. Ask again for a new copy.",
+    ),
+}
+# Where a carer may be sent back to once another day is open: their own pages only.
+BACK = re.compile(r"/(today\?day=\d{1,3}|visits/[A-Za-z0-9-]{1,64}/note|notes/[A-Za-z0-9-]{1,64})")
 FORM_TYPE = "application/x-www-form-urlencoded"
 # Limits on a posted form, checked before any other work. The longest note (4,000 characters of
 # up to four bytes, each byte percent-encoded as three) is about 48 KB; the busiest forms (a
@@ -305,7 +339,9 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
     plan = {visit["id"]: visit for visit in demo_week["visits"]}
     junctions = {client["id"]: client["node"] for client in demo_week["clients"]}
     homes = {carer["id"]: carer["home"] for carer in demo_week["carers"]}
-    demo_now = demo_week["now"]  # the demo's clock: a day and a minute
+    # The demo's clock, a day and a minute, read on every request; a caller that sets
+    # settings["clock"] moves it without restarting the app (and losing its database).
+    settings.setdefault("clock", dict(demo_week["now"]))
     db.prepare(path, demo_week)
     if demo:
         add_demo_users(path)
@@ -483,10 +519,16 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         if user is None:
             return to("/signin")
         if user["role"] not in roles:
-            return page_403(request)
+            return page_403(request, connection, user["id"])
         return session, user
 
-    def page_403(request: Request) -> HTMLResponse:
+    def refused(request: Request, connection: Any, user: str, status: int) -> None:
+        """Every refusal of a signed-in person is logged with the address they asked for."""
+        path = request.url.path[:LONGEST_LOGGED]
+        log(connection, {"event": "refused", "user": user, "status": status, "path": path})
+
+    def page_403(request: Request, connection: Any, user: str) -> HTMLResponse:
+        refused(request, connection, user, 403)
         response = page(request, "forbidden.html", {})
         response.status_code = 403
         return response
@@ -539,7 +581,8 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         message = "Nothing was saved. Go back and the page will have a fresh form."
         return problem(request, 403, "This form has expired", message, back)
 
-    def no_note(request: Request, back: str) -> HTMLResponse:
+    def no_note(request: Request, back: str, connection: Any, user: str) -> HTMLResponse:
+        refused(request, connection, user, 404)
         message = "This note does not exist, or it is not yours to see."
         return problem(request, 404, "No such note", message, back)
 
@@ -551,20 +594,63 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         return hashlib.sha256(request.state.visitor.encode("ascii")).hexdigest()
 
     def visible_note(connection: Any, note_id: str, request: Request) -> Any:
-        """A note's author, or None if there is no such note or another demo visitor wrote it."""
+        """A note's author and day, or None if there is no such note or another demo visitor
+        wrote it."""
         return connection.execute(
-            f"SELECT n.carer FROM notes n WHERE n.id = ? AND {screens.VISIBLE}",
+            f"SELECT n.carer, n.day FROM notes n WHERE n.id = ? AND {screens.VISIBLE}",
             (note_id, visitor_of(request)),
         ).fetchone()
 
-    def chosen_day(raw: str | None) -> int:
-        """The day asked for if it is one of the week's, else the last day. Compared as text:
-        `int()` refuses some characters `isdigit()` accepts ("²"), and very long numbers."""
+    def week_day(raw: str | None) -> int | None:
+        """The day asked for if it is one of the week's. Compared as text: `int()` refuses some
+        characters `isdigit()` accepts ("²"), and very long numbers."""
         days: list[int] = demo_week["days"]
         for day in days:
             if raw == str(day):
                 return day
-        return days[-1]
+        return None
+
+    def chosen_day(raw: str | None) -> int:
+        """The day asked for if it is one of the week's, else the clock's day (the last day when
+        the clock is past the week)."""
+        asked = week_day(raw)
+        if asked is not None:
+            return asked
+        today: int = settings["clock"]["day"]
+        return today if today in demo_week["days"] else demo_week["days"][-1]
+
+    def carer_may_open(connection: Any, request: Request, user: Any, kind: str, day: int) -> bool:
+        """Whether this carer may open their own `kind` of record from `day` now: the rule is
+        `access.carer_may_open`; the days they opened with a reason today come from the alerts,
+        kept to this demo visitor."""
+        today = settings["clock"]["day"]
+        rows = connection.execute(
+            "SELECT day FROM alerts WHERE user = ? AND visitor IS ? AND clock_day = ?",
+            (user["id"], visitor_of(request), today),
+        )
+        return access.carer_may_open(kind, day, today, {row["day"] for row in rows})
+
+    def closed_day(
+        request: Request, connection: Any, session: dict[str, Any], user: Any, day: int,
+        back: str, reason: str = "", message: str = "",
+    ) -> HTMLResponse:  # fmt: skip
+        """Another day's records, refused in place with the way to open them: a reason. Shows
+        the day only, never a client."""
+        if not message:
+            refused(request, connection, user["id"], 403)
+        context = {
+            "user": user["id"],
+            "csrf": session["csrf"],
+            "day": day,
+            "long_date": screens.week(demo_week["start"], [day])[0]["long"],
+            "back": back,
+            "reason": reason,
+            "message": message,
+            "longest": LONGEST_REASON,
+        }
+        response = page(request, "opening.html", context)
+        response.status_code = 400 if message else 403
+        return response
 
     @app.get("/queue", response_class=HTMLResponse)
     def queue(request: Request, day: str | None = None) -> Response:
@@ -575,6 +661,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 return found
             session, user = found
             today = chosen_day(day)
+            log(connection, {"event": "view register", "user": user["id"], "day": today})
             context = {
                 "user": user["id"],
                 "csrf": session["csrf"],
@@ -597,9 +684,13 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             session, user = found
             row = visible_note(connection, note_id, request)
             if row is None:
-                return no_note(request, HOME[user["role"]])
-            if user["role"] == "carer" and row["carer"] != user["carer"]:
-                return page_403(request)
+                return no_note(request, HOME[user["role"]], connection, user["id"])
+            if user["role"] == "carer":
+                if row["carer"] != user["carer"]:
+                    return page_403(request, connection, user["id"])
+                if not carer_may_open(connection, request, user, access.NOTE, row["day"]):
+                    back = f"/notes/{note_id}"
+                    return closed_day(request, connection, session, user, row["day"], back)
             log(connection, {"event": "view note", "user": user["id"], "note": note_id})
             detail = screens.note_detail(connection, note_id, visitor_of(request))
             reviewer = user["role"] == "lead"
@@ -631,7 +722,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             if not auth.csrf_ok(session, fields.get("csrf", "")):
                 return expired(request, f"/notes/{note_id}")
             if visible_note(connection, note_id, request) is None:
-                return no_note(request, HOME[user["role"]])
+                return no_note(request, HOME[user["role"]], connection, user["id"])
             detail = screens.note_detail(connection, note_id, visitor_of(request))
             missed = fields.get("missed", "")
             if not detail["findings"] and missed not in screens.CATEGORIES_SET | {
@@ -694,9 +785,84 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             context = {
                 "user": user["id"],
                 "csrf": session["csrf"],
+                "alerts": screens.alerts(connection, demo_week["start"], visitor_of(request)),
                 "team": screens.team(demo_week["retention"]),
             }
             return page(request, "team.html", context)
+        finally:
+            connection.close()
+
+    @app.post("/alerts/{alert_id}/reviewed")
+    def review_alert(request: Request, alert_id: str, fields: FormFields) -> Response:
+        """The manager marks a carer's opening of another day reviewed, once."""
+        connection = db.connect(path, budget)
+        try:
+            found = signed_in(request, connection, ("manager",))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            if not auth.csrf_ok(session, fields.get("csrf", "")):
+                return expired(request, "/team")
+            alert = connection.execute(
+                "SELECT id FROM alerts WHERE CAST(id AS TEXT) = ? AND visitor IS ?",
+                (alert_id, visitor_of(request)),
+            ).fetchone()
+            if alert is None:
+                refused(request, connection, user["id"], 404)
+                message = "This alert does not exist."
+                return problem(request, 404, "No such alert", message, "/team")
+            with db.WRITE:
+                cursor = connection.execute(
+                    "INSERT INTO alert_reviews (alert, reviewer, reviewed) VALUES (?, ?, ?) "
+                    "ON CONFLICT (alert) DO NOTHING",
+                    (alert["id"], user["id"], time.time()),
+                )
+                if cursor.rowcount:
+                    log(connection, {"event": "review opening", "user": user["id"],
+                                     "alert": alert["id"]})  # fmt: skip
+                connection.commit()
+            return to("/team#openings")
+        finally:
+            connection.close()
+
+    @app.post("/openings")
+    def open_day(request: Request, fields: FormFields) -> Response:
+        """A carer opens another day's records with a reason. The alert for the manager and its
+        audit entry are one write; the reason is kept in the alert only, never the log."""
+        connection = db.connect(path, budget)
+        try:
+            found = signed_in(request, connection, ("carer",))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            if not auth.csrf_ok(session, fields.get("csrf", "")):
+                return expired(request, "/today")
+            day = week_day(fields.get("day"))
+            if day is None:
+                message = "That day is not in this week. Nothing was opened."
+                return problem(request, 400, "No such day", message, "/today")
+            back = fields.get("back", "")
+            if not BACK.fullmatch(back):
+                back = f"/today?day={day}"
+            if carer_may_open(connection, request, user, access.SHEET, day):
+                return to(back)  # already open: nothing to record
+            reason = fields.get("reason", "").strip()
+            if not reason or len(reason) > LONGEST_REASON:
+                message = f"Nothing was opened: write why in 1 to {LONGEST_REASON} characters."
+                return closed_day(request, connection, session, user, day, back,
+                                  fields.get("reason", ""), message)  # fmt: skip
+            clock = settings["clock"]
+            with db.WRITE:
+                cursor = connection.execute(
+                    "INSERT INTO alerts (user, visitor, day, reason, clock_day, clock_minute, "
+                    "opened) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (user["id"], visitor_of(request), day, reason, clock["day"], clock["minute"],
+                     time.time()),
+                )  # fmt: skip
+                log(connection, {"event": "open another day", "user": user["id"], "day": day,
+                                 "alert": cursor.lastrowid})  # fmt: skip
+                connection.commit()
+            return to(back)
         finally:
             connection.close()
 
@@ -710,8 +876,12 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             session, user = found
             chosen = chosen_day(day)
             carer = user["carer"]
+            if not carer_may_open(connection, request, user, access.SHEET, chosen):
+                back = f"/today?day={chosen}"
+                return closed_day(request, connection, session, user, chosen, back)
+            log(connection, {"event": "view day sheet", "user": user["id"], "day": chosen})
             sheet = screens.carer_day(
-                connection, carer, chosen, visitor_of(request), plan, demo_now
+                connection, carer, chosen, visitor_of(request), plan, settings["clock"]
             )
             sketch = None
             live = None
@@ -725,15 +895,17 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 "csrf": session["csrf"],
                 "week": screens.week(demo_week["start"], demo_week["days"]),
                 "day": chosen,
-                "is_today": chosen == demo_week["now"]["day"],
-                "now": screens.clock(demo_week["now"]["minute"]),
+                "is_today": chosen == settings["clock"]["day"],
+                "now": screens.clock(settings["clock"]["minute"]),
                 "sheet": sheet,
                 "sketch": sketch,
                 "live": live,
                 "sent": sent == "1",
                 "link": "/today",
             }
-            return page(request, "today.html", context)
+            response = page(request, "today.html", context)
+            response.headers[SERVED_DAY] = str(settings["clock"]["day"])
+            return response
         finally:
             connection.close()
 
@@ -753,12 +925,15 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         first note once one exists, since a care record is never edited."""
         notes = screens.own_notes(connection, user["carer"], visit["id"], visitor_of(request))
         planned = plan[visit["id"]]
+        sheet_open = carer_may_open(connection, request, user, access.SHEET, visit["day"])
         context = {
             "user": user["id"],
             "csrf": session["csrf"],
+            # Yesterday's form opens, its day sheet does not: back to today's.
+            "back": f"/today?day={visit['day']}" if sheet_open else "/today",
             # A note records a visit that happened: before it begins there is no form.
             "from": None
-            if screens.started(planned, demo_now)
+            if screens.started(planned, settings["clock"])
             else screens.clock(planned["starts"]),
             "visit": {
                 "id": visit["id"],
@@ -775,7 +950,9 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             "message": message,
             "longest": LONGEST_NOTE,
         }
-        return page(request, "write.html", context)
+        response = page(request, "write.html", context)
+        response.headers[SERVED_DAY] = str(settings["clock"]["day"])
+        return response
 
     @app.get("/visits/{visit_id}/note", response_class=HTMLResponse)
     def write(request: Request, visit_id: str) -> Response:
@@ -787,7 +964,11 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             session, user = found
             visit = own_visit(connection, user["carer"], visit_id)
             if visit is None:
-                return page_403(request)
+                return page_403(request, connection, user["id"])
+            if not carer_may_open(connection, request, user, access.FORM, visit["day"]):
+                back = f"/visits/{visit_id}/note"
+                return closed_day(request, connection, session, user, visit["day"], back)
+            log(connection, {"event": "view visit", "user": user["id"], "visit": visit_id})
             return write_form(request, connection, session, user, visit)
         finally:
             connection.close()
@@ -808,16 +989,16 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             carer = user["carer"]
             visit = own_visit(connection, carer, visit_id)
             if visit is None:
-                return page_403(request)
-            sheet = f"/today?day={visit['day']}"
-            if not screens.started(plan[visit_id], demo_now):
+                return page_403(request, connection, user["id"])
+            sheet = "/today"
+            if not screens.started(plan[visit_id], settings["clock"]):
                 message = "A note records a visit that happened. Nothing was saved."
                 return problem(request, 400, "This visit has not begun", message, sheet)
             visitor = visitor_of(request)
             asked = fields.get("amends", "") or None
             own = screens.own_notes(connection, carer, visit_id, visitor)
             if asked is not None and asked not in {note["id"] for note in own}:
-                return page_403(request)
+                return page_403(request, connection, user["id"])
             key = fields.get("key", "")
             body = fields.get("body", "").strip()
             if not KEY.fullmatch(key):
@@ -828,7 +1009,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 response = write_form(request, connection, session, user, visit, body, message)
                 response.status_code = 400
                 return response
-            sent = f"{sheet}&sent=1"
+            sent = "/today?sent=1"
             with db.WRITE:  # looking for an earlier copy and storing it are one step
                 earlier = connection.execute(
                     "SELECT visit, body FROM notes WHERE carer = ? AND idempotency_key = ?",
@@ -873,6 +1054,8 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 item["visit"]: item["reason"] for item in rota_data["uncovered"][str(chosen)]
             }
             the_day = screens.rota_day(connection, chosen, plan, reasons, carer)
+            log(connection, {"event": "view rota", "user": user["id"], "day": chosen,
+                             "carer": the_day["chosen"]})  # fmt: skip
             sketch = None
             if the_day["chosen"]:
                 stops = tuple(junctions[visit["client_id"]] for visit in the_day["route"])
@@ -899,6 +1082,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             if isinstance(found, Response):
                 return found
             session, user = found
+            log(connection, {"event": "view re-plan", "user": user["id"]})
             view = screens.replan_view(connection, rota_data["replan"])
             context = {
                 "user": user["id"],
@@ -928,7 +1112,8 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
         finally:
             connection.close()
 
-    def no_referral(request: Request) -> HTMLResponse:
+    def no_referral(request: Request, connection: Any, user: str) -> HTMLResponse:
+        refused(request, connection, user, 404)
         message = "This referral does not exist."
         return problem(request, 404, "No such referral", message, "/referrals")
 
@@ -981,7 +1166,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
             session, user = found
             response = referral_page(request, connection, session, user, referral_id)
             if response is None:
-                return no_referral(request)
+                return no_referral(request, connection, user["id"])
             log(connection, {"event": "view referral", "user": user["id"], "referral": referral_id})
             return response
         finally:
@@ -1004,7 +1189,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 "SELECT claims FROM referrals WHERE id = ?", (referral_id,)
             ).fetchone()
             if known is None:
-                return no_referral(request)
+                return no_referral(request, connection, user["id"])
             read = [claim["claim"] for claim in json.loads(known["claims"])]
             profile, why = screens.profile_from_form(fields, read)
             if profile is None:
@@ -1015,7 +1200,7 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                 response = referral_page(request, connection, session, user, referral_id, profile,
                                          message)  # fmt: skip
                 if response is None:
-                    return no_referral(request)
+                    return no_referral(request, connection, user["id"])
                 response.status_code = 400
                 return response
             with db.WRITE:
@@ -1030,6 +1215,171 @@ def create_app(settings: dict[str, Any]) -> FastAPI:
                                  "referral": referral_id, "decision": decision})  # fmt: skip
                 connection.commit()
             return to(f"{back}#who")
+        finally:
+            connection.close()
+
+    def export_request(connection: Any, request: Request, request_id: str) -> Any:
+        """An export request in view of this demo visitor, with who approved and downloaded it
+        (None for each not yet done), or None if there is no such request."""
+        return connection.execute(
+            "SELECT r.*, a.approved_by, x.released_by FROM export_requests r "
+            "LEFT JOIN export_approvals a ON a.request = r.id "
+            "LEFT JOIN export_releases x ON x.request = r.id "
+            "WHERE CAST(r.id AS TEXT) = ? AND r.visitor IS ?",
+            (request_id, visitor_of(request)),
+        ).fetchone()
+
+    def export_refused(request: Request, connection: Any, user: Any, why: str) -> HTMLResponse:
+        status, title, message = EXPORT_REFUSALS[why]
+        refused(request, connection, user["id"], status)
+        return problem(request, status, title, message, "/exports", "Back to exports")
+
+    def exports_page(
+        request: Request, connection: Any, session: dict[str, Any], user: Any,
+        reason: str = "", message: str = "",
+    ) -> HTMLResponse:  # fmt: skip
+        clients = connection.execute("SELECT id, name FROM clients ORDER BY name").fetchall()
+        context = {
+            "user": user["id"],
+            "role": user["role"],
+            "csrf": session["csrf"],
+            "clients": [dict(row) for row in clients],
+            "requests": screens.exports(connection, visitor_of(request), time.time()),
+            "reason": reason,
+            "message": message,
+            "longest": LONGEST_REASON,
+        }
+        response = page(request, "exports.html", context)
+        response.status_code = 400 if message else 200
+        return response
+
+    @app.get("/exports", response_class=HTMLResponse)
+    def exports(request: Request) -> Response:
+        """Requests for a client's record as a file: the lead asks, a coordinator approves."""
+        connection = db.connect(path, budget)
+        try:
+            found = signed_in(request, connection, ("lead", "coordinator"))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            log(connection, {"event": "view exports", "user": user["id"]})
+            return exports_page(request, connection, session, user)
+        finally:
+            connection.close()
+
+    @app.post("/exports")
+    def ask_export(request: Request, fields: FormFields) -> Response:
+        """The lead asks for one client's record, with a reason; it needs a coordinator's
+        approval within a working day."""
+        connection = db.connect(path, budget)
+        try:
+            found = signed_in(request, connection, ("lead",))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            if not auth.csrf_ok(session, fields.get("csrf", "")):
+                return expired(request, "/exports")
+            client = connection.execute(
+                "SELECT id FROM clients WHERE id = ?", (fields.get("client", ""),)
+            ).fetchone()
+            reason = fields.get("reason", "").strip()
+            if client is None or not reason or len(reason) > LONGEST_REASON:
+                message = (
+                    "Nothing was asked: choose a client and write why in 1 to "
+                    f"{LONGEST_REASON} characters."
+                )
+                return exports_page(request, connection, session, user, fields.get("reason", ""),
+                                    message)  # fmt: skip
+            now = time.time()
+            with db.WRITE:
+                cursor = connection.execute(
+                    "INSERT INTO export_requests (client, reason, requested_by, visitor, "
+                    "requested, deadline) VALUES (?, ?, ?, ?, ?, ?)",
+                    (client["id"], reason, user["id"], visitor_of(request), now,
+                     now + EXPORT_SECONDS),
+                )  # fmt: skip
+                log(connection, {"event": "ask for export", "user": user["id"],
+                                 "request": cursor.lastrowid, "client": client["id"]})  # fmt: skip
+                connection.commit()
+            return to("/exports")
+        finally:
+            connection.close()
+
+    @app.post("/exports/{request_id}/approve")
+    def approve_export(request: Request, request_id: str, fields: FormFields) -> Response:
+        """A coordinator approves another person's request, once, before its deadline. Who
+        approved comes from the session, never the form."""
+        connection = db.connect(path, budget)
+        try:
+            found = signed_in(request, connection, ("coordinator",))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            if not auth.csrf_ok(session, fields.get("csrf", "")):
+                return expired(request, "/exports")
+            asked = export_request(connection, request, request_id)
+            if asked is None:
+                return export_refused(request, connection, user, "missing")
+            if asked["requested_by"] == user["id"]:
+                return export_refused(request, connection, user, "own")
+            if asked["approved_by"] is not None:
+                return export_refused(request, connection, user, "approved")
+            if time.time() > asked["deadline"]:
+                return export_refused(request, connection, user, "late")
+            with db.WRITE:
+                cursor = connection.execute(
+                    "INSERT INTO export_approvals (request, approved_by, approved) "
+                    "VALUES (?, ?, ?) ON CONFLICT (request) DO NOTHING",
+                    (asked["id"], user["id"], time.time()),
+                )
+                if cursor.rowcount:
+                    log(connection, {"event": "approve export", "user": user["id"],
+                                     "request": asked["id"]})  # fmt: skip
+                connection.commit()
+            return to("/exports")
+        finally:
+            connection.close()
+
+    @app.post("/exports/{request_id}/download")
+    def download_export(request: Request, request_id: str, fields: FormFields) -> Response:
+        """The person who asked downloads the approved record once, as a FHIR R4 file. The
+        download is logged, with the file's SHA-256, before the file is sent."""
+        connection = db.connect(path, budget)
+        try:
+            found = signed_in(request, connection, ("lead",))
+            if isinstance(found, Response):
+                return found
+            session, user = found
+            if not auth.csrf_ok(session, fields.get("csrf", "")):
+                return expired(request, "/exports")
+            asked = export_request(connection, request, request_id)
+            if asked is None:
+                return export_refused(request, connection, user, "missing")
+            if asked["requested_by"] != user["id"]:
+                return export_refused(request, connection, user, "not yours")
+            if asked["approved_by"] is None:
+                return export_refused(request, connection, user, "unapproved")
+            if asked["released_by"] is not None:
+                return export_refused(request, connection, user, "downloaded")
+            record = fhir.bundle(connection, demo_week, asked["client"], visitor_of(request))
+            text = fhir.dumps(record)
+            digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            with db.WRITE:
+                cursor = connection.execute(
+                    "INSERT INTO export_releases (request, released_by, released, resources, "
+                    "sha256) VALUES (?, ?, ?, ?, ?) ON CONFLICT (request) DO NOTHING",
+                    (asked["id"], user["id"], time.time(), len(record["entry"]), digest),
+                )
+                if not cursor.rowcount:
+                    connection.rollback()
+                    return export_refused(request, connection, user, "downloaded")
+                log(connection, {"event": "fhir export", "user": user["id"],
+                                 "request": asked["id"], "client": asked["client"],
+                                 "resources": len(record["entry"]), "sha256": digest})  # fmt: skip
+                connection.commit()
+            name = f"{asked['client']}-record.json"
+            disposition = {"Content-Disposition": f'attachment; filename="{name}"'}
+            return Response(text, media_type="application/fhir+json", headers=disposition)
         finally:
             connection.close()
 

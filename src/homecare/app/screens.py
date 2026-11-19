@@ -407,6 +407,27 @@ def team(retention: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def alerts(connection: sqlite3.Connection, start: str, visitor: str | None) -> list[dict[str, Any]]:
+    """Each time a carer opened another day's records, those still to review first, then the
+    newest: who, which day, when by the demo clock, their reason, and whether it was reviewed."""
+    query = (
+        "SELECT a.*, r.reviewer FROM alerts a LEFT JOIN alert_reviews r ON r.alert = a.id "
+        "WHERE a.visitor IS ? ORDER BY r.reviewer IS NOT NULL, a.id DESC"
+    )
+    found = []
+    for row in connection.execute(query, (visitor,)):
+        given = week(start, [row["clock_day"]])[0]["long"]
+        found.append({
+            "id": row["id"],
+            "carer": row["user"],
+            "day": week(start, [row["day"]])[0]["long"],
+            "when": f"{given} at {clock(row['clock_minute'])}",
+            "reason": row["reason"],
+            "reviewed": row["reviewer"] is not None,
+        })  # fmt: skip
+    return found
+
+
 SHOWN_CELLS = (0, 1, 2, 3, 6, 7)  # visit, client, carer, date, check in, check out
 
 
@@ -611,6 +632,41 @@ GENDERS = {"none": "No preference", "female": "Women only", "male": "Men only"}
 YES = "yes"  # the value every ticked claim posts
 # Every option but the carers' gender (a radio): the needs, visits and rules.
 OPTIONS = list(NEED_LABELS) + [f"visit: {slot}" for slot in agency.SLOTS] + list(FLAG_LABELS)
+
+
+def exports(
+    connection: sqlite3.Connection, visitor: str | None, now: float
+) -> list[dict[str, Any]]:
+    """Each export request in view, newest first: whose record, why, who asked and when, and
+    where it stands (waiting for approval until its deadline, past it, approved, downloaded)."""
+    query = (
+        "SELECT r.*, c.name, a.approved_by, x.released_by FROM export_requests r "
+        "JOIN clients c ON c.id = r.client "
+        "LEFT JOIN export_approvals a ON a.request = r.id "
+        "LEFT JOIN export_releases x ON x.request = r.id "
+        "WHERE r.visitor IS ? ORDER BY r.id DESC"
+    )
+    found = []
+    for row in connection.execute(query, (visitor,)):
+        if row["released_by"] is not None:
+            state = "downloaded"
+        elif row["approved_by"] is not None:
+            state = "approved"
+        elif now > row["deadline"]:
+            state = "expired"
+        else:
+            state = "waiting"
+        found.append({
+            "id": row["id"],
+            "client": row["name"],
+            "reason": row["reason"],
+            "requested_by": row["requested_by"],
+            "asked": stamp(row["requested"]),
+            "deadline": stamp(row["deadline"]),
+            "approved_by": row["approved_by"],
+            "state": state,
+        })  # fmt: skip
+    return found
 
 
 def stamp(seconds: float) -> str:

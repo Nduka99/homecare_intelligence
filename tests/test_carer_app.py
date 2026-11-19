@@ -233,6 +233,19 @@ def test_a_visit_not_yet_begun_cannot_have_a_note(tmp_path: Path) -> None:
     assert app_notes(tmp_path) == []
 
 
+def test_the_clock_starts_at_the_seeds_and_moving_it_needs_no_restart(tmp_path: Path) -> None:
+    """The demo's clock is the seed's unless set, and is read on every request, so moving it
+    (as the access measurements do) changes what the running app allows."""
+    client, settings = make(tmp_path)
+    assert settings["clock"] == seed.load()["now"]
+    later = visit_to_write(tmp_path, begun=False)
+    sign_in(client, later["carer"])
+    assert 'name="body"' not in client.get(f"/visits/{later['id']}/note").text
+    planned = {visit["id"]: visit for visit in seed.load()["visits"]}[later["id"]]
+    settings["clock"] = {"day": later["day"], "minute": planned["starts"]}
+    assert 'name="body"' in client.get(f"/visits/{later['id']}/note").text
+
+
 def test_only_carer_pages_load_the_app_and_the_worker_is_served_from_the_root(
     tmp_path: Path,
 ) -> None:

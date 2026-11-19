@@ -50,13 +50,14 @@
       <li data-screen="/signin">Select <strong>Sign in as this carer</strong>.</li>
       <li data-screen="/today">Read <strong>To write up</strong> first, then your next visit and when to leave.</li>
       <li data-screen="/today">Under <strong>Your route</strong>, select <strong>Zoom in</strong>, <strong>Zoom out</strong> or <strong>Whole route</strong>.</li>
-      <li data-screen="/today">Select a day in the week to see that day's visits.</li>
+      <li data-screen="/today">Your visits open for today. Yesterday's notes can still be added to from <strong>Add to your note</strong>.</li>
+      <li data-screen="/today">To see another day, select it in the week, write why under <strong>Why you need this day</strong>, then select <strong>Open another day</strong>. Your manager sees your reason.</li>
     </ol>
   </div>
   <div class="guide-task" id="carer-offline">
     <h3>Write a visit note, even with no signal</h3>
     <ol class="steps">
-      <li data-screen="/today">After your day opens, wait a few seconds so the phone can save it.</li>
+      <li data-screen="/today">After your day opens, wait a few seconds so the phone can save it. The phone keeps today's visits only; earlier days are removed when a new day opens.</li>
       <li>Turn off your signal, for example with aeroplane mode.</li>
       <li data-screen="/today">Select <strong>Write the note</strong>.</li>
       <li data-screen="/visits/{visit_id}/note">Type what you did and how the person seemed, then select <strong>Send the note</strong>.</li>
@@ -103,6 +104,15 @@
       <li data-screen="/notes/{note_id}">Select <strong>Save and open the next note</strong>. It will not save until you record your read.</li>
     </ol>
   </div>
+  <div class="guide-task" id="lead-export">
+    <h3>Send a client's record to another service</h3>
+    <ol class="steps">
+      <li data-screen="/queue">Above the register, select <strong>Exports</strong>.</li>
+      <li data-screen="/exports">Under <strong>Ask for an export</strong>, choose the client and write why it is needed, then select <strong>Ask for an export</strong>.</li>
+      <li data-screen="/exports">A coordinator must approve it within a day. In this demo, sign in as the coordinator to do that.</li>
+      <li data-screen="/exports">Once it shows <strong>Approved</strong>, select <strong>Download the file</strong>. You can download it once.</li>
+    </ol>
+  </div>
   <div class="actions"><a class="button secondary" href="/signin#role-lead">Start as the safeguarding lead</a></div>
 </section>
 
@@ -115,6 +125,13 @@
       <li data-screen="/team">Read the list, most likely to leave first. The top tenth are marked <strong>Suggested</strong>.</li>
       <li data-screen="/team">Select <strong>What raises it most</strong> under a carer to see why.</li>
       <li>The list supports a conversation. It never decides anything about a person.</li>
+    </ol>
+  </div>
+  <div class="guide-task">
+    <h3>Review a carer's opening of another day</h3>
+    <ol class="steps">
+      <li data-screen="/team">When a carer opens another day, a notice at the top says so. Select <strong>See why</strong>.</li>
+      <li data-screen="/team">Under <strong>Days opened by carers</strong>, read who, which day and their reason, then select <strong>Mark as reviewed</strong>.</li>
     </ol>
   </div>
   <div class="actions"><a class="button secondary" href="/signin#role-manager">Start as the manager</a></div>
@@ -153,6 +170,13 @@
       <li data-screen="/referrals/{referral_id}">An option marked <strong>Not stated: ask the referrer</strong> is a question, not a no.</li>
       <li data-screen="/referrals/{referral_id}">Tick <strong>I have asked the referrer</strong>, then select <strong>Confirm this profile</strong>.</li>
       <li data-screen="/referrals/{referral_id}"><strong>Who may go</strong> now lists each visit's rules and the carers who may go.</li>
+    </ol>
+  </div>
+  <div class="guide-task">
+    <h3>Approve a request for a client's record</h3>
+    <ol class="steps">
+      <li data-screen="/exports">Above the rota, select <strong>Exports</strong>.</li>
+      <li data-screen="/exports">Read the client and why the lead asked. If it is needed, select <strong>Approve</strong>. You cannot approve a request you asked for.</li>
     </ol>
   </div>
   <div class="actions"><a class="button secondary" href="/signin#role-coordinator">Start as the coordinator</a></div>

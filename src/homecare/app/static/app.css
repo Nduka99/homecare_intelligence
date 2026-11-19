@@ -863,3 +863,7 @@ textarea { display: block; resize: vertical; line-height: 1.6; }
   }
   .choice, .row, .button { transition: background-color 120ms ease-out, border-color 120ms ease-out; }
 }
+
+/* The manager's list of days opened by carers: who and which day, when, their reason, the action. */
+.opening { display: grid; gap: 0.5rem; padding: 0.75rem 1rem; }
+.opening .reason { overflow-wrap: anywhere; }

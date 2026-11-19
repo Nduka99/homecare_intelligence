@@ -23,7 +23,8 @@ from test_screens import make, sign_in, visit_to_write
 
 ROLES = ["visitor", "carer", "lead", "manager", "coordinator"]
 PARAMETERS = ["day", "choose", "sent", "carer"]
-FIELDS = ["csrf", "user", "password", "body", "key", "amends", "missed", "gender", "asked"]
+FIELDS = ["csrf", "user", "password", "body", "key", "amends", "missed", "gender", "asked",
+          "day", "reason", "back", "client"]  # fmt: skip
 TEXT = st.text(max_size=40)
 # A cookie travels in a header, whose bytes are read as Latin-1; ";" and "," end a cookie.
 COOKIE = st.text(

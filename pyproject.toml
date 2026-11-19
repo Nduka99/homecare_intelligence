@@ -86,10 +86,11 @@ ignore = ["S311"]
 # Downloads only the two pinned https release URLs, each checked by SHA-256, and runs only the
 # pinned Java runtime on the pinned validator with a fixed argument list (no shell).
 "src/homecare/fhir_check.py" = ["S310", "S603"]
-# SQL put together only from the fixed fragments in screens.py (VISIBLE, READ, ARRIVAL); every
-# value is still a ? parameter.
+# SQL put together only from the fixed fragments in screens.py (VISIBLE, READ, ARRIVAL) and
+# fhir.py (IN_VIEW); every value is still a ? parameter.
 "src/homecare/app/screens.py" = ["S608"]
 "src/homecare/app/main.py" = ["S608"]
+"src/homecare/fhir.py" = ["S608"]
 
 [tool.mypy]
 strict = true

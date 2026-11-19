@@ -28,13 +28,17 @@ inspectors' own scores.
 4. **Carer app (built).** A carer's day on a phone: the next visit and when to leave, the route
    on OpenStreetMap's map (or a sketch the app draws when there is no signal), a link to
    directions, and the visit note. It installs to the
-   home screen, opens without signal, keeps a note on the phone until the carer sends it, and
-   clears everything it kept when the carer signs out. It collects no location.
+   home screen, opens without signal, keeps a note on the phone until the carer sends it, keeps
+   only the current day's pages, and clears everything it kept when the carer signs out or the
+   server signs them out (unsent notes stay). It collects no location. A carer opens their own
+   visits for today, and a note form for yesterday too; another day opens only with a reason,
+   which the manager sees and reviews.
 5. **Visit import (built).** Checks an old care system's visit export row by row against the plan.
    A row that cannot be trusted is held in quarantine with its reasons, never repaired by
    guessing; a usable row that needs a look is flagged.
 6. **FHIR export (built).** Writes one client's record in FHIR R4, the health-records standard,
-   for another system to read. Only what people recorded is exported (see below).
+   for another system to read, only with two people: the safeguarding lead asks and a coordinator
+   approves. Only what people recorded is exported (see below).
 7. **Referral reader (built, command line).** Reads a free-text referral for a new client into the
    profile the visit planning uses, each item with the words it rests on. A person confirms the
    profile before any carer is matched (see below).
@@ -193,13 +197,12 @@ addresses at once can still fill the storage, which only restarts the demo.
 
 [FHIR](https://hl7.org/fhir/R4/) (Fast Healthcare Interoperability Resources) is HL7's standard
 for exchanging health records as small JSON "resources"; a Bundle is a set of them. UK Core, the
-UK's base set of FHIR profiles, is built on FHIR R4. `homecare fhir export` writes one client's
-record as a FHIR R4 Bundle. It reads the accounts-mode database on the laptop; the web app has no
-export endpoint.
-
-```
-SIGN_IN=accounts AUDIT_KEY=<64 hex characters> uv run homecare fhir export --client C45 --out c45.json
-```
+UK's base set of FHIR profiles, is built on FHIR R4. A client's record leaves the app as a
+FHIR R4 Bundle only with two people, on the **Exports** page: the safeguarding lead asks for one
+client's record with a reason; a coordinator approves it in their own session within 24 hours;
+the lead then downloads the file once. No one approves their own request, and the download is
+logged, with the file's SHA-256, before the file is sent. In the demo one visitor can take both
+roles, and a demo file holds only that visitor's own notes beside the demo week's.
 
 | In the app | In FHIR R4 |
 |---|---|
@@ -333,14 +336,23 @@ uv run homecare referrals match draft.json
   - `tests/test_referral_reader.py`: invented quotes, injected instructions and unconfirmed
     drafts against the referral reader;
   - `tests/test_app.py` and `tests/test_screens.py`: sign-in, sessions, forms, roles, escaping;
-  - `tests/test_audit_attacks.py`: editing, deleting and rewriting the audit log.
+  - `tests/test_audit_attacks.py`: editing, deleting and rewriting the audit log;
+  - `tests/test_access.py`: every page read and every refusal logged, IDs only; a carer's records
+    for today only, another day only with a reason that reaches the manager;
+  - `tests/test_exports.py`: a client's record leaves only with two people, checked over all 16
+    sets of roles against the rule written in the test.
 - **Accessibility.** `uv run python scripts/ui_check.py` checks every screen against WCAG 2.2 A and
   AA with axe-core in a real browser, at desktop, tablet and phone widths, in light and dark, with
   a planted fault every run must catch.
 - **The carer app in a browser.** `uv run python scripts/pwa_check.py` checks, with the app's own
   security policy in force: that it can be installed, that a note written without signal is sent
-  once when signal returns, that signing out leaves nothing on the phone, and that script on the
-  page cannot write HTML. Each check has a control that shows it can fail.
+  once when signal returns, that signing out leaves nothing on the phone, that the phone keeps
+  only the current day and clears saved pages when the server signs the carer out, and that script
+  on the page cannot write HTML. Each check has a control that shows it can fail.
+- **Who can open what, measured.** `uv run python scripts/access_trial.py <out.json>` counts, per
+  role, how many clients' records each person can open and for how long, two independent ways (a
+  formula over the week's data and the app's own pages); replays a working day to show no needed
+  access is refused; and checks that every signed-in page logs its reads and refusals.
 - **The import.** The sample export has faults planted on purpose, and the planting writes down
   what each line must get. The test compares the import's verdict on every line with that list.
 - **Pinned files.** Models, the demo data and the road map are checked against their SHA-256
@@ -361,9 +373,8 @@ uv run homecare referrals match draft.json
 | Check the carer app in a browser | `uv run python scripts/pwa_check.py` |
 | Walk a running copy as a phone user (needs Playwright's Chromium) | `uv run python scripts/phone_walk.py <link> <screenshot folder>` |
 | Import a visit export into the accounts-mode database | `SIGN_IN=accounts uv run homecare platform import FILE` |
-| Add an account for accounts mode (asks for a password) | `uv run homecare platform user NAME --role lead` |
-| Export one client's record as FHIR R4 (accounts mode) | `SIGN_IN=accounts uv run homecare fhir export --client C45 --out c45.json` |
-| Check FHIR files with HL7's validator against FHIR R4 and UK Core (install it once first) | `uv run homecare fhir install-validator`, then `uv run homecare fhir validate c45.json` |
+| Add an account for accounts mode (asks for a password) | `SIGN_IN=accounts uv run homecare platform user NAME --role lead` |
+| Check FHIR files with HL7's validator against FHIR R4 and UK Core (install it once first) | `uv run homecare fhir install-validator`, then `uv run homecare fhir validate C45-record.json` |
 
 **Research runs.** These need local model files and a GPU. The notes commands run models with
 [llama.cpp](https://github.com/ggml-org/llama.cpp)'s `llama-server`. The model files listed in

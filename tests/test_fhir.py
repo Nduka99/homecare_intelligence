@@ -1,4 +1,4 @@
-"""The FHIR R4 export of one client's record (`homecare fhir export`).
+"""The FHIR R4 file of one client's record (`fhir.bundle`), as the two-person export sends it.
 
 Every expected answer comes from outside the export code: the FHIR R4 specification (its
 required codes, written out below), an independent FHIR library (fhir.resources, whose R4B models
@@ -9,8 +9,6 @@ to see its test fail.
 
 import base64
 import copy
-import hashlib
-import json
 import sqlite3
 import uuid
 from pathlib import Path
@@ -20,9 +18,8 @@ import pydantic
 import pytest
 from fhir.resources.R4B.bundle import Bundle
 
-from homecare import cli, fhir
-from homecare.app import auditlog, db, seed
-from homecare.app import main as app_main
+from homecare import fhir
+from homecare.app import db, seed
 
 CLIENT = "C45"
 OTHER = "C01"
@@ -112,7 +109,7 @@ def plant(path: Path) -> sqlite3.Connection:
 @pytest.fixture
 def exported(tmp_path: Path) -> tuple[sqlite3.Connection, dict[str, Any]]:
     connection = plant(tmp_path / "h.db")
-    return connection, fhir.bundle(connection, seed.load(), CLIENT)
+    return connection, fhir.bundle(connection, seed.load(), CLIENT, None)
 
 
 def resources(found: dict[str, Any], kind: str | None = None) -> list[dict[str, Any]]:
@@ -309,47 +306,5 @@ def test_an_addition_appends_to_its_note_and_the_export_repeats_exactly(
     assert addition["relatesTo"] == [{"code": "appends", "target": {"reference": first}}]
     assert addition["date"] == "2026-11-08T12:00:00+00:00"
     assert "date" not in by_id(found, "DocumentReference", "demo-week-0651")["resource"]
-    again = fhir.bundle(connection, seed.load(), CLIENT)
+    again = fhir.bundle(connection, seed.load(), CLIENT, None)
     assert fhir.dumps(again) == fhir.dumps(found)
-
-
-def accounts(monkeypatch: pytest.MonkeyPatch, folder: Path) -> bytes:
-    key = bytes(range(32))
-    monkeypatch.setattr(app_main, "ACCOUNTS_FOLDER", folder)
-    monkeypatch.setenv("SIGN_IN", "accounts")
-    monkeypatch.setenv("AUDIT_KEY", key.hex())
-    return key
-
-
-def test_the_command_writes_the_file_and_audits_it(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    key = accounts(monkeypatch, tmp_path)
-    plant(tmp_path / "homecare.db").close()
-    out = tmp_path / "c45.json"
-    cli.main(["fhir", "export", "--client", CLIENT, "--out", str(out)])
-    data = out.read_bytes()
-    connection = db.connect(tmp_path / "homecare.db")
-    assert json.loads(data) == fhir.bundle(connection, seed.load(), CLIENT)
-    chain = auditlog.chain(connection)
-    assert [link["entry"]["event"] for link in chain] == ["fhir export"]
-    entry = chain[0]["entry"]
-    assert entry["client"] == CLIENT
-    assert entry["sha256"] == hashlib.sha256(data).hexdigest()
-    assert entry["resources"] == len(json.loads(data)["entry"])
-    assert auditlog.problems(connection, key, tmp_path / "audit.anchor") == []
-
-
-def test_the_command_refuses_demo_mode_and_an_unknown_client(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    out = tmp_path / "out.json"
-    monkeypatch.setenv("SIGN_IN", "demo")
-    with pytest.raises(SystemExit, match="SIGN_IN=accounts"):
-        cli.main(["fhir", "export", "--client", CLIENT, "--out", str(out)])
-    accounts(monkeypatch, tmp_path)
-    with pytest.raises(SystemExit, match="no client 'C99'"):
-        cli.main(["fhir", "export", "--client", "C99", "--out", str(out)])
-    assert not out.exists()
-    connection = db.connect(tmp_path / "homecare.db")
-    assert auditlog.chain(connection) == []

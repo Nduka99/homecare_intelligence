@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "marks.html" import icon %}
+{% block title %}Open another day{% endblock %}
+{% block main %}
+<div class="page-head">
+  <a class="back" href="/today">{{ icon("back") }}Your visits</a>
+  <h1>Open another day</h1>
+  <p class="sub">{{ long_date }}</p>
+</div>
+<form method="post" action="/openings">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="day" value="{{ day }}">
+  <input type="hidden" name="back" value="{{ back }}">
+  <section class="card">
+    <p class="lead-in">Your visits open for today only. To see {{ long_date }}, write why you need it. Your manager sees what you write.</p>
+    {% if demo %}<p class="notice caution">This is a demo: do not type real information. It is cleared when the demo restarts.</p>{% endif %}
+    {% if message %}<p class="alert" role="alert" id="reason-error">{{ message }}</p>{% endif %}
+    <div class="field">
+      <label for="reason">Why you need this day</label>
+      <textarea id="reason" name="reason" rows="4" maxlength="{{ longest }}" required{% if message %} aria-describedby="reason-error" aria-invalid="true"{% endif %}>{{ reason }}</textarea>
+    </div>
+    <div class="actions">
+      <button class="button primary" type="submit">Open another day</button>
+      <a class="button secondary" href="/today">Back to today's visits</a>
+    </div>
+  </section>
+</form>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "marks.html" import coordinator_nav, lead_nav %}
+{% block title %}Exports{% endblock %}
+{% block main %}
+<div class="page-head">
+  {{ lead_nav("exports") if role == "lead" else coordinator_nav("exports") }}
+  <h1>Exports</h1>
+  <p class="sub">A client's record as a file, for another service</p>
+</div>
+<p class="lead-in">A client's record leaves only with two people: the safeguarding lead asks, with a reason, and a coordinator approves within a day. Then the lead downloads the file, once.</p>
+{% if demo %}<p class="notice caution">In this demo you can take both roles, so one person can ask and approve. In an agency these are two people.</p>{% endif %}
+
+{% if role == "lead" %}
+<form method="post" action="/exports">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <section class="card" aria-labelledby="ask-title">
+    <h2 id="ask-title">Ask for an export</h2>
+    {% if message %}<p class="alert" role="alert" id="ask-error">{{ message }}</p>{% endif %}
+    <div class="field">
+      <label for="client">Client</label>
+      <select id="client" name="client" required>
+        <option value="">Choose a client</option>
+        {% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="reason">Why it is needed</label>
+      <textarea id="reason" name="reason" rows="3" maxlength="{{ longest }}" required{% if message %} aria-describedby="ask-error" aria-invalid="true"{% endif %}>{{ reason }}</textarea>
+    </div>
+    <div class="actions"><button class="button primary" type="submit">Ask for an export</button></div>
+  </section>
+</form>
+{% endif %}
+
+<h2 class="section-title">Requests</h2>
+{% if requests %}
+<ul class="list">
+  {% for r in requests %}
+  <li class="opening">
+    <p><strong>{{ r.client }}</strong></p>
+    <p class="hint">Asked by {{ r.requested_by }} on {{ r.asked }}</p>
+    <p class="reason">Why: {{ r.reason }}</p>
+    {% if r.state == "waiting" %}
+    <p><span class="tag visit">Waiting for approval</span> until {{ r.deadline }}</p>
+    {% if role == "coordinator" and r.requested_by != user %}
+    <form method="post" action="/exports/{{ r.id }}/approve">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="button primary" type="submit">Approve</button>
+    </form>
+    {% endif %}
+    {% elif r.state == "expired" %}
+    <p><span class="tag">Past its deadline</span> Ask again if it is still needed.</p>
+    {% elif r.state == "approved" %}
+    <p><span class="tag done">Approved</span> by {{ r.approved_by }}</p>
+    {% if role == "lead" and r.requested_by == user %}
+    <form method="post" action="/exports/{{ r.id }}/download">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="button primary" type="submit">Download the file</button>
+    </form>
+    {% endif %}
+    {% else %}
+    <p><span class="tag done">Downloaded</span></p>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="plain">No export has been asked for.</p>
+{% endif %}
+{% endblock %}

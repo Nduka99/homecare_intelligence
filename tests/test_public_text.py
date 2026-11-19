@@ -21,7 +21,7 @@ from homecare.app import db, main, screens
 from homecare.notes import routing
 from test_carer_app import send
 from test_referral_screens import FIRST, PROFILE, confirm
-from test_screens import LAST_DAY, make, sign_in, visit_to_write
+from test_screens import LAST_DAY, csrf_of, make, sign_in, visit_to_write
 
 COMMIT = "0123456789abcdef0123456789abcdef01234567"  # stands in for the build's commit
 HEX_RUN = re.compile(r"[0-9a-f]{12,}", re.IGNORECASE)  # hashes and commit ids
@@ -97,6 +97,13 @@ def every_page(client: TestClient, tmp_path: Path) -> tuple[dict[str, str], set[
     get("carer's day", "/today", f"/today?day={LAST_DAY}")
     get("write a note", "/visits/{visit_id}/note", f"/visits/{visit['id']}/note")
     send(client, visit["id"], "Lunch made and eaten.")  # waits for the lead, not read by AI
+    get("another day, closed", "/today", f"/today?day={LAST_DAY - 2}")
+    csrf = re.search(r'name="csrf" value="([^"]+)"', pages["another day, closed"])
+    assert csrf, "the closed day's page has no form"
+    opening = {"csrf": csrf.group(1), "day": str(LAST_DAY - 2), "reason": "", "back": ""}
+    pages["another day, no reason"] = client.post("/openings", data=opening).text
+    opening["reason"] = "Checking a note before a review."
+    client.post("/openings", data=opening)
     get("no access", "/queue", "/queue")
     sign_in(client, "lead")
     get("register", "/queue", f"/queue?day={LAST_DAY}")
@@ -118,6 +125,21 @@ def every_page(client: TestClient, tmp_path: Path) -> tuple[dict[str, str], set[
     pages["referral refused"] = confirm(client, FIRST, unasked).text
     confirm(client, FIRST, PROFILE)
     get("referral confirmed", "/referrals/{referral_id}", f"/referrals/{FIRST}")
+    get("exports, coordinator", "/exports", "/exports")
+    sign_in(client, "lead")
+    get("exports, lead", "/exports", "/exports")
+    csrf = re.search(r'name="csrf" value="([^"]+)"', pages["exports, lead"])
+    assert csrf, "the exports page has no form"
+    asked = {"csrf": csrf.group(1), "client": "C45", "reason": ""}
+    pages["export refused"] = client.post("/exports", data=asked).text
+    client.post("/exports", data=asked | {"reason": "A hospital admission."})
+    sign_in(client, "coordinator")
+    get("export waiting", "/exports", "/exports")
+    approve = {"csrf": csrf_of(pages["export waiting"])}
+    client.post("/exports/1/approve", data=approve)
+    pages["export approved twice"] = client.post("/exports/1/approve", data=approve).text
+    sign_in(client, "lead")
+    get("export approved", "/exports", "/exports")
     get("page not found", "", "/no-such-page")
     get("wrong method", "", "/signout")
     worker = SERVICE_WORKER.read_text(encoding="utf-8")

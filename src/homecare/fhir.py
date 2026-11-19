@@ -1,4 +1,4 @@
-"""One client's record as a FHIR R4 Bundle of plain JSON (`homecare fhir export`).
+"""One client's record as a FHIR R4 Bundle of plain JSON, for the two-person export (`/exports`).
 
 Only records a person made leave the system: the client, the carers who wrote notes, the visits
 those notes belong to, the notes themselves, and the concerns a reviewer confirmed. A model
@@ -186,33 +186,43 @@ def entry(item: dict[str, Any]) -> dict[str, Any]:
     return {"fullUrl": full_url(item["resourceType"], item["id"]), "resource": item}
 
 
-def bundle(connection: sqlite3.Connection, seed: dict[str, Any], client_id: str) -> dict[str, Any]:
-    """The client's record: Patient, Practitioners, Encounters, DocumentReferences and Flags."""
+# A note or decision in view: one with no visitor (the seed's, or any in accounts mode), or the
+# demo visitor's own. Each demo visitor's notes and decisions are theirs alone.
+IN_VIEW = "(visitor IS NULL OR visitor = ?)"
+
+
+def bundle(
+    connection: sqlite3.Connection, seed: dict[str, Any], client_id: str, visitor: str | None
+) -> dict[str, Any]:
+    """The client's record: Patient, Practitioners, Encounters, DocumentReferences and Flags,
+    from the notes and decisions in view of `visitor` (None in accounts mode)."""
     client = connection.execute(
         "SELECT id, name FROM clients WHERE id = ?", (client_id,)
     ).fetchone()
     if client is None:
         raise ValueError(f"no client {client_id!r}")
+    seen = f"SELECT visit, carer FROM notes WHERE client = ? AND {IN_VIEW}"
     notes = connection.execute(
         "SELECT id, visit, client, carer, body, written, amends FROM notes WHERE client = ? "
-        "ORDER BY id",
-        (client_id,),
+        f"AND {IN_VIEW} ORDER BY id",
+        (client_id, visitor),
     ).fetchall()
     visits = connection.execute(
-        "SELECT id, day, slot, duration FROM visits WHERE id IN "
-        "(SELECT visit FROM notes WHERE client = ?) ORDER BY day, id",
-        (client_id,),
+        f"SELECT id, day, slot, duration FROM visits WHERE id IN (SELECT visit FROM ({seen})) "
+        "ORDER BY day, id",
+        (client_id, visitor),
     ).fetchall()
     carers = connection.execute(
-        "SELECT id, gender FROM carers WHERE id IN "
-        "(SELECT carer FROM notes WHERE client = ?) ORDER BY id",
-        (client_id,),
+        f"SELECT id, gender FROM carers WHERE id IN (SELECT carer FROM ({seen})) ORDER BY id",
+        (client_id, visitor),
     ).fetchall()
     decisions = connection.execute(
         "SELECT d.id, d.note, d.finding, d.label, d.category, d.reviewer, d.decided, "
         "f.category AS found FROM decisions d JOIN notes n ON n.id = d.note "
-        "LEFT JOIN findings f ON f.id = d.finding WHERE n.client = ? ORDER BY d.id",
-        (client_id,),
+        "LEFT JOIN findings f ON f.id = d.finding WHERE n.client = ? "
+        "AND (n.visitor IS NULL OR n.visitor = ?) AND (d.visitor IS NULL OR d.visitor = ?) "
+        "ORDER BY d.id",
+        (client_id, visitor, visitor),
     ).fetchall()
     confirmed = concerns(decisions)
     planned = {visit["id"]: visit["starts"] for visit in seed["visits"]}
