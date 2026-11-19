@@ -42,6 +42,13 @@ inspectors' own scores.
 7. **Referral reader (built, command line).** Reads a free-text referral for a new client into the
    profile the visit planning uses, each item with the words it rests on. A person confirms the
    profile before any carer is matched (see below).
+8. **Access controls (built).** Each person opens only what their work needs, and every look is
+   recorded. A carer opens their own clients' records for today; another day needs a reason, which
+   the manager sees and reviews. The phone keeps only today's visits. Every record read and every
+   refusal is written to the audit log. A client's record leaves the app only when one person asks
+   and another approves. Measured with `scripts/access_trial.py`: carers' access to records fell
+   54% against the app before these controls, and a whole working day replayed through the app
+   was refused nothing anyone needed.
 
 <p>
   <img src="screenshots/carer-day.png" width="240" alt="A carer's day on a phone: the visit to write up, the next visit and when to leave">
@@ -446,7 +453,7 @@ All are optional.
 | `src/homecare/matching/` | Visit planning: the optimiser, the hand-made baseline, the independent checker |
 | `src/homecare/evaluation/` | Scoring runs, attack tests and the two studies |
 | `tests/` | Every test, including the attack tests |
-| `scripts/` | The full check (`check.py`), the accessibility check (`ui_check.py`), the carer app's browser check (`pwa_check.py`), the phone walk (`phone_walk.py`) and the icon renderer (`make_icons.py`) |
+| `scripts/` | The full check (`check.py`), the accessibility check (`ui_check.py`), the carer app's browser check (`pwa_check.py`), the phone walk (`phone_walk.py`), the load check at the live server's limits (`load_check.py`), the access measurement (`access_trial.py`) and the icon renderer (`make_icons.py`) |
 | `models.json` | Every local model: source, revision, licence and SHA-256 |
 | `evaluation/sets.json` | The SHA-256 of every registered note and referral set, so a changed set is refused |
 | `Dockerfile`, `requirements/serve.lock` | The small serving image, installed from hash-locked requirements |
