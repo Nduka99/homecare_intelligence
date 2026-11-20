@@ -22,7 +22,7 @@ homecare = "homecare.cli:main"
 dev = [
     "fhir-resources>=8.3.0,<8.4",
     "httpx2>=2.16.0",
-    "hypothesis==6.170.14",
+    "hypothesis==6.170.15",
     "mypy>=2.4.1",
     "playwright==1.63.0",
     "pytest>=9.2.0",
